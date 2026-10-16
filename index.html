@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SCA / SAA Explorer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-drawer" viewBox="0 0 24 24"><path d="M3 5h18v14H3z M15 5v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17.5 9.5h1.5M17.5 12h1.5M17.5 14.5h1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.9" fill="currentColor"/><circle cx="12" cy="12" r="1.9" fill="currentColor"/><circle cx="19" cy="12" r="1.9" fill="currentColor"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-cross" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.6" r="1.25" fill="currentColor"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M14 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app" id="app">
+    <header class="bar">
+      <div class="brand">
+        <span class="brand-name">SCA / SAA Explorer</span>
+        <span class="brand-sub">Synthetic malware simulator</span>
+      </div>
+      <nav class="steps" id="steps" aria-label="Walkthrough steps"></nav>
+      <div class="actions">
+        <button class="icon-btn" id="btnDrawer" aria-expanded="false" aria-controls="drawer" title="Specimen drawer (D)">
+          <svg aria-hidden="true"><use href="#i-drawer"/></svg><span>Specimens</span>
+        </button>
+        <div class="menu-wrap">
+          <button class="icon-btn only" id="btnMenu" aria-haspopup="menu" aria-expanded="false" aria-controls="menu" title="More">
+            <svg aria-hidden="true"><use href="#i-more"/></svg><span class="sr">More options</span>
+          </button>
+          <div class="menu" id="menu" role="menu" hidden>
+            <button role="menuitemcheckbox" aria-checked="false" id="mTruth"><span>Show true families</span><kbd>T</kbd></button>
+            <button role="menuitem" id="mFull"><span>Full screen</span><kbd>F</kbd></button>
+            <div class="menu-row" role="group" aria-label="Text size">
+              <span>Text size</span>
+              <button class="mini" id="mZoomOut" aria-label="Smaller text">−</button>
+              <span class="zoom-val" id="zoomVal">100%</span>
+              <button class="mini" id="mZoomIn" aria-label="Larger text">+</button>
+            </div>
+            <button role="menuitem" id="mKeys"><span>Keyboard shortcuts</span><kbd>?</kbd></button>
+            <button role="menuitem" id="mReset" class="danger"><span>Reset demo</span><kbd>R</kbd></button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="stage" id="main">
+      <header class="stage-head">
+        <div class="head-text">
+          <h1 id="stepTitle"></h1>
+          <p class="lede" id="stepLede"></p>
+        </div>
+        <div class="head-tools"><button class="btn framework-back" id="btnFramework" hidden><svg aria-hidden="true"><use href="#i-prev"/></svg>Back to framework</button><div class="ref-label" id="stepRef" aria-label="Paper reference"></div></div>
+      </header>
+      <div class="stage-body" id="stage"></div>
+    </main>
+
+    <footer class="status">
+      <button class="nav-btn" id="btnPrev" aria-label="Previous step"><svg aria-hidden="true"><use href="#i-prev"/></svg><span>Back</span></button>
+      <span class="status-step" id="sbStep"></span>
+      <button class="nav-btn" id="btnNext" aria-label="Next step"><span id="nextLabel">Next: SCA</span><svg aria-hidden="true"><use href="#i-next"/></svg></button>
+      <span class="status-msg" id="sbMsg" role="status" aria-live="polite"></span>
+      <span class="status-params" id="sbParams"></span>
+      <span class="status-note">Synthetic data · not the paper's results · <kbd>?</kbd> shortcuts</span>
+    </footer>
+
+    <aside class="drawer" id="drawer" aria-label="Specimen drawer" inert>
+      <div class="drawer-head">
+        <h2>Specimen drawer</h2>
+        <button class="icon-btn only" id="btnDrawerClose" aria-label="Close drawer"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="filter">
+        <label for="filter">Filter</label>
+        <input id="filter" type="text" spellcheck="false" autocomplete="off" placeholder='e.g. sim.saa >= 0.6'>
+        <p class="filter-msg" id="filterMsg" aria-live="polite"></p>
+      </div>
+      <div class="drawer-list" id="plist"></div>
+      <div class="drawer-details" id="details"></div>
+      <div class="drawer-bytes" id="bytes"></div>
+    </aside>
+
+    <dialog class="keys" id="keysDialog" aria-labelledby="keysTitle">
+      <h2 id="keysTitle">Keyboard shortcuts</h2>
+      <dl>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next step</dd>
+        <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Jump to a walkthrough step</dd>
+        <dt><kbd>D</kbd></dt><dd>Open or close the specimen drawer</dd>
+        <dt><kbd>/</kbd></dt><dd>Filter specimens (opens the drawer)</dd>
+        <dt><kbd>T</kbd></dt><dd>Show or hide the true families</dd>
+        <dt><kbd>F</kbd></dt><dd>Full screen</dd>
+        <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Bigger / smaller text</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Release a slider or menu, close the drawer</dd>
+        <dt><kbd>R</kbd></dt><dd>Reset the demo</dd>
+        <dt>Click / Shift-click</dt><dd>Choose specimen A / specimen B</dd>
+      </dl>
+      <form method="dialog"><button class="btn primary">Close</button></form>
+    </dialog>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

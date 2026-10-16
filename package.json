@@ -1,0 +1,13 @@
+{
+  "name": "sca-saa-explorer",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Interactive walkthrough of Shared Code Analysis and Shared Attribute Analysis (Vashista & Patro, IEEE Access 2025) for a CS440 presentation.",
+  "scripts": {
+    "start": "node server.js",
+    "verify": "node tools/verify.js && node tools/verify-walkthrough.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

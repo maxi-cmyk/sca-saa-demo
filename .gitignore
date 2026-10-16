@@ -1,0 +1,11 @@
+# Impeccable workspace files
+.impeccable/
+
+# Tests and verification scripts
+tests/
+test/
+/tools/verify.js
+/tools/verify-walkthrough.js
+
+# Screenshots
+screenshots/
