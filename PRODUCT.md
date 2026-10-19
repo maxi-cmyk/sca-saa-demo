@@ -24,8 +24,8 @@ Local and offline; static HTML/CSS/JS without dependencies. Keyboard-driven pres
 
 ## Capabilities and Constraints
 
-- Five pages: Overview, SCA, SAA, Combine, Output. Overview opens input and preprocessing details, and its eight framework boxes navigate to the relevant deep views.
-- Next reveals feature sets, hash minima, MinHash estimates, attribute intersection/union, code vectors, cosine similarity and weighted combination in sequence.
+- Four presentation tabs: Overview, SCA, SAA and Synthesis. Open on the clickable framework; retain the selected pair throughout. Slides supply the overview.
+- Next moves directly between the three worked examples. Each screen presents one calculation and decision; intermediate arithmetic is disclosed inline. Explore retains the full lessons and dataset views, with Back to demo returning to the presentation.
 - SCA: feature-string MinHash, sketch candidates, ranked search results.
 - SAA: attribute Jaccard index and threshold graph.
 - Integrated score: cosine similarity over synthetic byte-block frequency vectors plus attribute Jaccard index; default code weight .60. Five synthetic lineages contain 30, 12, 16, 10 and 7 samples.

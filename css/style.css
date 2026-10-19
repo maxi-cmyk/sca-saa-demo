@@ -175,8 +175,6 @@ h1 { margin: 0; font-size: 1.62rem; line-height: 1.2; color: var(--white); font-
 }
 .ref-label .k { display: block; font-weight: 400; font-size: 0.86rem; letter-spacing: 0.04em; opacity: 0.8; }
 .stage-body { flex: 1; min-height: 0; overflow: auto; padding: 0.85rem 0.1rem 0.4rem; }
-.stage-body.enter > * { animation: rise 420ms var(--ease) both; }
-@keyframes rise { from { opacity: 0.001; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ------------------------------------------------------------------ status */
 .status {
@@ -783,11 +781,6 @@ table.t th .aside { font-weight: 400; color: var(--faint); margin-left: 0.5rem; 
 .framework-groups > div { display:grid; grid-template-columns:10rem 1fr; gap:1rem; padding:.5rem 0; border-bottom:1px solid var(--rule); }
 .framework-groups dt { font-weight:700; color:var(--cream); }
 .framework-groups dd { margin:0; font-family:var(--mono); overflow-wrap:anywhere; }
-::view-transition-group(framework-focus) { animation-duration:420ms; animation-timing-function:cubic-bezier(.16,1,.3,1); }
-::view-transition-old(framework-focus) { animation:framework-fade-out 180ms ease-out both; }
-::view-transition-new(framework-focus) { animation:framework-fade-in 300ms 90ms ease-out both; }
-@keyframes framework-fade-out { to { opacity:0; } }
-@keyframes framework-fade-in { from { opacity:0; } to { opacity:1; } }
 @media (max-width:900px) {
   .framework-map { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.7rem .8rem; aspect-ratio:auto; padding:.25rem 0; }
   .framework-connections { display:none; }
@@ -800,7 +793,6 @@ table.t th .aside { font-weight: 400; color: var(--faint); margin-left: 0.5rem; 
 }
 @media (prefers-reduced-motion:reduce) {
   .framework-node { transition:none; }
-  ::view-transition-group(framework-focus), ::view-transition-old(framework-focus), ::view-transition-new(framework-focus) { animation-duration:0s; animation-delay:0s; }
 }
 
 @media (max-width:900px) {
@@ -832,3 +824,23 @@ table.t th .aside { font-weight: 400; color: var(--faint); margin-left: 0.5rem; 
 
 .cohort-graph { overflow-x:auto; justify-content:flex-start; }
 .cohort-graph .viz { max-width:none; }
+
+/* Three worked examples; expanded calculations stay in optional disclosures. */
+.compact-demo { width:100%; }
+.compact-source { max-width:75ch; }
+.compact-cosine { text-align:center; font-size:1.05rem; }
+.compact-demo .guide-signature { min-width:0; }
+.compact-demo .guide-bars { margin:.7rem 0; }
+.compact-demo .guide-sum { margin:.6rem 0; font-size:1.4rem; }
+.compact-demo .guide-truth { margin-bottom:.7rem; }
+.compact-demo .guide-signatures { margin:.6rem 0; }
+@media(max-width:700px) {
+  .compact-demo .guide-sum { font-size:1.15rem; }
+  .actions { gap:.3rem; }
+}
+
+/* Keep the content width stable when a tab needs vertical scrolling. */
+.stage-body { scrollbar-gutter:stable; }
+
+/* Active tabs change colour without changing label width. */
+.step { font-weight:700; }

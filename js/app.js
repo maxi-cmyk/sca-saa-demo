@@ -35,14 +35,14 @@
     { id:"results",metric:"final",title:"Read the analysis output",lede:"Explore the combined scores through one view at a time.",ref:"Sec. IV.G–H · Fig. 8–10" }
   ];
   const STEP_NAMES = ["Overview","SCA","SAA","Combine","Output"];
-  const TRUTH_FROM = 3;
+  const TRUTH_FROM = 1;
 
   const K_VALUES = [4, 8, 16, 32, 48, 64, 96, 128, 192, 256];
   const SKETCH_R = 4;
 
   // ---------------------------------------------------------------- state --
   const DEFAULTS = {
-    step: 0, inputView:"overview", overviewFocus:null, scaView:"features", saaView:"sets", combineView:"vectors", outputView:"graph", selA: 0, selB: 1, region: null,
+    step: 0, explore:false, returnStep:0, inputView:"overview", overviewFocus:null, scaView:"features", saaView:"sets", combineView:"vectors", outputView:"graph", selA: 0, selB: 1, region: null,
     k: 64, theta: 0.7, alpha: 0.6,
     truthOverride: null, drawer: false,
     nameFilter: null, zoom: 1,
@@ -154,6 +154,13 @@
     if (msg && !err) statusTimer = setTimeout(() => { el.textContent = ""; }, 4000);
   }
   function renderStatus() {
+    if(!state.explore) {
+      $("#sbStep").textContent = `${state.step+1} / 4`;
+      $("#btnPrev").disabled = state.step===0;
+      $("#btnNext").disabled = state.step===3;
+      $("#nextLabel").textContent = state.step===3 ? "Finished" : `Next: ${state.step===0?"SCA":state.step===1?"SAA":"Synthesis"}`;
+      return;
+    }
     $("#sbStep").textContent = `${state.step + 1} / ${STEPS.length}`;
     $("#btnPrev").disabled = state.step === 0 && state.inputView === "overview";
     $("#btnNext").disabled = state.step === STEPS.length - 1;
@@ -166,9 +173,10 @@
 
   // ------------------------------------------------------------ top bar --
   function renderSteps() {
-    $("#steps").innerHTML = STEPS.map((s, i) =>
-      `<button class="step${i < state.step ? " done" : ""}" data-step="${i}" ${i === state.step ? 'aria-current="step"' : ""} title="${i + 1}. ${esc(STEP_NAMES[i])}">
-        <span class="n">${i + 1}</span><span class="lbl">${esc(STEP_NAMES[i])}</span>
+    const pages=state.explore ? STEPS.map((s,i)=>[s,i]) : [0,1,2,3].map(i=>[STEPS[i],i]);
+    $("#steps").innerHTML = pages.map(([s, i]) =>
+      `<button class="step${i < state.step ? " done" : ""}" data-step="${i}" ${i === state.step ? 'aria-current="step"' : ""} title="${i+1}. ${esc(i===3?"Synthesis":STEP_NAMES[i])}">
+        <span class="n">${i+1}</span><span class="lbl">${esc(i===3?"Synthesis":STEP_NAMES[i])}</span>
       </button>`).join("");
   }
   function renderHead() {
@@ -176,8 +184,16 @@
     $("#stepTitle").textContent = s.title;
     $("#stepLede").textContent = s.lede;
     $("#stepRef").textContent = s.ref;
+    if(!state.explore) {
+      $("#stepTitle").textContent = ["The SCA / SAA analysis framework", "SCA: compare code signatures", "SAA: compare attribute sets", "Synthesis: calculate the combined decision"][state.step];
+      $("#stepLede").textContent = ["Select a stage to open a worked example or explore the supporting detail.", "Extract strings → keep hash minima → compare signature positions.", "For the same pair, count shared attributes against all distinct attributes.", "Calculate code cosine similarity separately, then blend it with the attribute Jaccard index."][state.step];
+      $("#btnFramework").hidden=true;
+      $("#app").classList.add("guided");
+      document.title=`${state.step+1}. ${state.step===3?"Synthesis":STEP_NAMES[state.step]} · SCA / SAA Explorer`;
+      return;
+    }
     const overview=state.step===0&&state.inputView==="overview";
-    $("#btnFramework").hidden=overview;
+    $("#btnFramework").hidden=false;
     if(state.step===0) {
       $("#stepTitle").textContent=overview?"The SCA / SAA analysis framework":state.inputView==="preprocess"?"Preprocessing: prepare the features":"Input data: executable samples";
       $("#stepLede").textContent=overview?"Follow the complete workflow, or select any stage to explore it in depth.":state.inputView==="preprocess"?"Validate the executable, then build the representations used by each analysis.":`${N} fictional samples provide code-related and attribute-related evidence.`;
@@ -766,6 +782,7 @@
   }
   function openFramework(id) {
     const node=FRAMEWORK.find(n=>n.id===id); if(!node) return;
+    if(!state.explore && (node.step===0 || node.step===4)) { state.returnStep=0; state.explore=true; }
     state.overviewFocus=id;
     goStep(node.step);
     state[node.key]=node.scene;
@@ -774,29 +791,10 @@
   function returnFramework() {
     goStep(0); state.inputView="overview"; renderHead(); renderStage(false); refreshAll();
   }
-  let frameworkTransition=null;
-  function zoomFramework(id, source) {
-    if(frameworkTransition) frameworkTransition.skipTransition();
-    const returning=id===null,target=returning?state.overviewFocus:id;
-    const origin=source||$("#stage .guide-content");
-    const update=()=>{
-      if(returning) returnFramework(); else openFramework(id);
-      $("#stage").classList.remove("enter");
-      const destination=returning?($( `[data-framework="${target}"]` )||$(".framework-node")):$("#stage .guide-content");
-      if(destination) { destination.style.viewTransitionName="framework-focus"; if(returning) destination.focus({preventScroll:true}); }
-      if(!returning) { $("#stepTitle").setAttribute("tabindex","-1"); $("#stepTitle").focus({preventScroll:true}); }
-    };
-    const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if(!document.startViewTransition||reduce) { update(); $$("#stage [style]").forEach(el=>{el.style.viewTransitionName="";}); return; }
-    if(origin) origin.style.viewTransitionName="framework-focus";
-    const transition=document.startViewTransition(update);
-    frameworkTransition=transition;
-    const cleanup=()=>{
-      if(frameworkTransition!==transition) return;
-      frameworkTransition=null;
-      $$("#stage [style]").forEach(el=>{el.style.viewTransitionName="";});
-    };
-    transition.finished.then(cleanup,cleanup);
+  function zoomFramework(id) {
+    if(id===null) returnFramework(); else openFramework(id);
+    $("#stepTitle").setAttribute("tabindex","-1");
+    $("#stepTitle").focus({preventScroll:true});
   }
   function lessonTabs(id) {
     const lesson=LESSONS[id];
@@ -954,11 +952,32 @@
       }
     }
   };
+  function compactShell() {
+    return guideShell(`<div class="compact-demo">${examples()}<div id="guideCalculation"></div></div>`);
+  }
+  function renderCompact() {
+    const i=state.selA,j=state.selB,k=state.k;
+    const r=C.jaccard(SAMPLES[i].attrs,SAMPLES[j].attrs);
+    let body="";
+    if(state.step===1) {
+      const e=C.minhashEstimate(SIG[i].sig.slice(0,k),SIG[j].sig.slice(0,k));
+      const signature=who=>`<div class="guide-signature"><b>${esc(shortName(who))}</b>${SIG[who].sig.slice(0,Math.min(6,k)).map((v,n)=>`<code class="${SIG[i].sig[n]===SIG[j].sig[n]?"match":""}">${hex(v,8)}</code>`).join("")}</div>`;
+      body=`<p class="compact-source"><b>${SAMPLES[i].code.length} code strings in A · ${SAMPLES[j].code.length} in B.</b> Apply the same ${k} hash functions to each set; keep each function’s minimum.</p><div class="guide-signatures">${signature(i)}${signature(j)}</div><p class="caption">First ${Math.min(6,k)} of ${k} signature positions; highlighted values match.</p><p class="guide-sum">${e.matches} matching positions ÷ ${k} = <b class="t-sca">${f3(e.est)}</b> estimated Jaccard index</p>${takeaway(`${pairOutcome("sca")} ${methodReason("sca")}`)}<details class="guide-details"><summary>Inspect extracted strings and hash minima</summary>${setColumns("code")}${hashWalkthrough()}</details>`;
+    } else if(state.step===2) {
+      const sampleList=(label,items)=>`<section><h3>${label} <span class="num">(${items.length})</span></h3><p>${items.slice(0,3).map(x=>`<code>${esc(x)}</code>`).join("<br>")||"None"}${items.length>3?`<br><span class="caption">+ ${items.length-3} more</span>`:""}</p></section>`;
+      body=`<div class="feature-sets attribute-sets">${sampleList("Only A",r.onlyA)}${sampleList("Shared",r.shared)}${sampleList("Only B",r.onlyB)}</div><p class="guide-sum">${r.inter} shared ÷ ${r.union} distinct attributes = <b class="t-saa">${f3(r.j)}</b> Jaccard index</p>${takeaway(`${pairOutcome("saa")} ${methodReason("saa")}`)}<details class="guide-details"><summary>Inspect all extracted attributes</summary>${setColumns("attrs")}</details>`;
+    } else {
+      const d=C.cosineDetails(CODE_VECTORS[i],CODE_VECTORS[j]),fin=finalM()[i][j];
+      body=`<p class="compact-source"><b>Code blocks → count vectors → cosine similarity.</b> This code score is calculated independently of MinHash.</p><p class="compact-cosine">Cosine similarity = A · B ÷ (‖A‖ × ‖B‖)<br><span class="num">${d.dot} ÷ (√${d.squareA} × √${d.squareB}) = <b class="t-sca">${f3(d.similarity)}</b></span></p><div class="guide-bars">${scoreBar("Code · cosine similarity",d.similarity,"sca")}${scoreBar("Attributes · Jaccard index",r.j,"saa")}${scoreBar("Combined",fin,"fin")}</div><p class="guide-sum">${f2(state.alpha)} × ${f3(d.similarity)} + ${f2(1-state.alpha)} × ${f3(r.j)} ≈ <b>${f3(fin)}</b></p>${takeaway(`${pairOutcome("final")} ${caseText()}`)}<details class="guide-details"><summary>Inspect code vectors, products and weights</summary><p>For this simulation, each distinct 16-byte code block is a feature; its frequency is a vector entry. MinHash signatures are not used in this calculation.</p>${vectorTable(d,true,true)}<div class="guide-query"><label for="alpha">Code weight α</label><input id="alpha" type="range" min="0" max="1" step="0.05" value="${state.alpha}" data-ctl="alpha"><b>${f2(state.alpha)}</b></div></details>`;
+    }
+    $("#guideCalculation").innerHTML=`${pairName()}${body}<p class="caption">Link threshold: ${f2(state.theta)}. Scores and known relationships are simulated.</p>`;
+  }
   function chartHeight() { return window.innerWidth<=900 ? 320 : Math.max(180,Math.min(340,bodyH()-280)); }
   function syncLessonTabs() {
     $$("[data-lesson]").forEach(b=>b.setAttribute("aria-pressed",String(state[b.dataset.lessonKey]===b.dataset.lesson)));
   }
   function advance(direction) {
+    if(!state.explore) { goStep(clampN(state.step+direction,0,3)); return; }
     const lesson=LESSONS[STEPS[state.step].id];
     if(lesson) {
       const at=lesson.scenes.findIndex(([id])=>id===state[lesson.key]),next=at+direction;
@@ -976,15 +995,13 @@
   // --------------------------------------------------------------- render --
   function renderStage(animate) {
     const st = $("#stage");
-    st.innerHTML = GUIDES[STEPS[state.step].id].render();
-    st.classList.toggle("enter", !!animate);
-    if (animate) setTimeout(() => st.classList.remove("enter"), 500);
+    st.innerHTML = state.explore ? GUIDES[STEPS[state.step].id].render() : state.step===0 ? frameworkOverview() : compactShell();
     syncControls();
   }
   function refreshAll() {
     const active=document.activeElement,focusId=active&&active.dataset&&active.dataset.ctl?active.id:null;
     const openDetails=new Set($$("#stage details[open]").map(d=>$("summary",d).textContent));
-    GUIDES[STEPS[state.step].id].refresh();
+    if(state.explore) GUIDES[STEPS[state.step].id].refresh(); else if(state.step!==0) renderCompact();
     syncControls();
     $$("#stage details").forEach(d=>{ if(openDetails.has($("summary",d).textContent)) d.open=true; });
     if(focusId && !document.contains(active)) { const replacement=document.getElementById(focusId); if(replacement) replacement.focus({preventScroll:true}); }
@@ -993,7 +1010,7 @@
     $("#mTruth").setAttribute("aria-checked", String(truthOn()));
   }
   function goStep(n) {
-    const next = clampN(n, 0, STEPS.length - 1);
+    const next = clampN(n, 0, state.explore?STEPS.length-1:3);
     const changed = next !== state.step;
     state.step = next;
     if(next===0) state.inputView="overview";
@@ -1180,7 +1197,8 @@
     $("#steps").addEventListener("click", (ev) => { const b = ev.target.closest("[data-step]"); if (b) goStep(+b.dataset.step); });
     $("#btnPrev").addEventListener("click", () => advance(-1));
     $("#btnNext").addEventListener("click", () => advance(1));
-    $("#btnFramework").addEventListener("click",()=>zoomFramework(null));
+    $("#btnFramework").addEventListener("click",()=>{state.explore=false;goStep(state.returnStep);});
+    $("#btnExplore").addEventListener("click",()=>{if(!state.explore)state.returnStep=state.step;state.explore=true;goStep(4);});
     $("#btnDrawer").addEventListener("click", () => setDrawer(!state.drawer));
     $("#btnDrawerClose").addEventListener("click", () => setDrawer(false));
     $("#btnMenu").addEventListener("click", () => toggleMenu());
@@ -1239,7 +1257,7 @@
       if (keyCtl && /^Arrow/.test(ev.key)) return; // keyboard users adjust the focused control; Esc releases it
       if (ev.key === "ArrowRight" || ev.key === "PageDown") { ev.preventDefault(); advance(1); }
       else if (ev.key === "ArrowLeft" || ev.key === "PageUp") { ev.preventDefault(); advance(-1); }
-      else if (/^[0-9]$/.test(ev.key)) { goStep(+ev.key - 1); if (keyCtl) el.blur(); }
+      else if (/^[1-5]$/.test(ev.key)) { goStep(+ev.key-1); if (keyCtl) el.blur(); }
       else if (ev.key === "/") { ev.preventDefault(); setDrawer(true); setTimeout(() => filter.focus(), 60); }
       else if (ev.key === "d" || ev.key === "D") setDrawer(!state.drawer);
       else if (ev.key === "t" || ev.key === "T") setTruth(!truthOn());
@@ -1264,7 +1282,7 @@
   bind();
   const hashStep = parseInt((location.hash.match(/step=(\d+)/) || [])[1], 10);
   state.step = -1;
-  goStep(Number.isFinite(hashStep) ? hashStep - 1 : 0);
+  goStep(Number.isFinite(hashStep) ? hashStep-1 : 0);
 
   window.SCASAA = { state: () => state, goStep, scaAt, SAA, SCA_EXACT };
 })();

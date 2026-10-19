@@ -429,3 +429,9 @@ Relationships and clustering share a single output view: thresholded edges besid
 
 
 The dataset contains 75 deterministic synthetic samples in five lineages. Dense relationship graphs arrange computed connected components in separate regions; each node retains a full-name tooltip and specimen selection. Group counts stay beside the graph. The full 75×75 matrix uses sparse axis labels and exact pair selection rather than unreadable per-cell numbers. t-SNE uses perplexity 15 and labels the selected pair.
+
+## Short presentation flow
+
+The main path is three worked examples: SCA, SAA, Synthesis. No framework, preprocessing, search ranking or dataset-output tour interrupts Next. Keep the selected pair across screens; each screen exposes evidence, arithmetic and threshold decision. Detailed calculations stay in native disclosures. Explore retains the detailed five-page navigation and 75-sample views; Back to demo restores the prior presentation screen. Navy, cream, local fonts and method colours are preserved.
+
+The clickable overview is restored as the first presentation tab. Tab and framework navigation switches immediately, without entrance or zoom animation; the content scrollbar reserves its width to prevent horizontal shifting.

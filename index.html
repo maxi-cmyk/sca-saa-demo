@@ -30,6 +30,7 @@
       </div>
       <nav class="steps" id="steps" aria-label="Walkthrough steps"></nav>
       <div class="actions">
+        <button class="icon-btn" id="btnExplore">Explore</button>
         <button class="icon-btn" id="btnDrawer" aria-expanded="false" aria-controls="drawer" title="Specimen drawer (D)">
           <svg aria-hidden="true"><use href="#i-drawer"/></svg><span>Specimens</span>
         </button>
@@ -59,7 +60,7 @@
           <h1 id="stepTitle"></h1>
           <p class="lede" id="stepLede"></p>
         </div>
-        <div class="head-tools"><button class="btn framework-back" id="btnFramework" hidden><svg aria-hidden="true"><use href="#i-prev"/></svg>Back to framework</button><div class="ref-label" id="stepRef" aria-label="Paper reference"></div></div>
+        <div class="head-tools"><button class="btn framework-back" id="btnFramework" hidden><svg aria-hidden="true"><use href="#i-prev"/></svg>Back to demo</button><div class="ref-label" id="stepRef" aria-label="Paper reference"></div></div>
       </header>
       <div class="stage-body" id="stage"></div>
     </main>
@@ -92,7 +93,7 @@
       <h2 id="keysTitle">Keyboard shortcuts</h2>
       <dl>
         <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next step</dd>
-        <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Jump to a walkthrough step</dd>
+        <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Jump to a demo tab (1–5 in Explore)</dd>
         <dt><kbd>D</kbd></dt><dd>Open or close the specimen drawer</dd>
         <dt><kbd>/</kbd></dt><dd>Filter specimens (opens the drawer)</dd>
         <dt><kbd>T</kbd></dt><dd>Show or hide the true families</dd>

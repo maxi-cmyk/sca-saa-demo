@@ -10,15 +10,17 @@ A focused, offline simulator for Vashista & Patro, *Enhancing Malware Analysis U
 
 ## Walkthrough
 
-| Page | Method and output | Paper reference |
-| --- | --- | --- |
-| Overview | Clickable framework diagram, input samples and preprocessing | Sec. III, Fig. 3 |
-| SCA | Feature sets → hash minima → MinHash estimate → sketch candidate search | Sec. III.A, IV.A |
-| SAA | Attribute sets → intersection/union → Jaccard index → similarity graph | Sec. III.B, IV.B |
-| Combine | Aligned block-count vectors → cosine similarity → weighted combination | Sec. III.C, Eq. 2 |
-| Output | One view at a time: relationships with connected-component clustering, red similarity matrix, t-SNE projection with interpretation | Sec. IV.G–H, Figs. 8–10 |
+The presentation opens on the clickable framework overview, followed by three worked examples. The selected pair persists across all three; Next and Back move between examples without intermediate calculation slides.
 
-The opening framework diagram adapts Figure 3 into eight clickable stages. Each box opens its detailed view; Back to framework returns to the diagram, with a zoom transition where supported and reduced-motion support. Next also follows a linear path through input data and preprocessing before SCA. Next reveals one calculation stage at a time. SCA demonstrates hash minima and signature matching; SAA shows A-only, shared and B-only attributes. Combine builds actual synthetic block-count vectors, exposes products and sums, derives vector lengths and cosine similarity, then weights code cosine similarity and the attribute Jaccard index. Each page has a short explanation and optional inline details. The specimen drawer remains available. The main flow excludes efficiency comparisons and paper critique; those belong in the presentation slides.
+| Screen | Visible calculation |
+| --- | --- |
+| SCA | Extracted-string counts → hash-minimum signatures → matching positions / signature length → estimated Jaccard index and decision |
+| SAA | A-only/shared/B-only attributes → intersection / union → Jaccard index and decision |
+| Synthesis | Code-block vectors → numerical cosine similarity calculation → weighted blend with attribute Jaccard index → final decision |
+
+Start with Related variants, then switch to Rewritten code to see the SCA false negative and how the additional attribute evidence changes the combined decision. Reused code and Similar attributes remain available as additional examples. All examples use calculated synthetic scores, with a visible threshold and known relationship.
+
+Inline disclosures contain extracted strings, hash minima, complete attributes, and vector products. **Explore** opens the optional full lessons, framework, ranked search, 75-sample graph, red heatmap and t-SNE. **Back to demo** returns to the presentation screen and preserves the selected pair. Slides provide the conceptual overview; the demo provides concrete calculations.
 
 SCA's standalone search uses feature strings, MinHash and sketches. Its output scores only candidates sharing a sketch with the query; skipped samples remain unscored. The integrated model follows the cosine-vector definition beside Equation 2: this simulator counts exact 16-byte code blocks from its generated files and calculates normalized cosine similarity. Its attribute term is the Jaccard index. Changing MinHash signature length therefore does not change the integrated score.
 
