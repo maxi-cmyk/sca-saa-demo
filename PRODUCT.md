@@ -24,13 +24,13 @@ Local and offline; static HTML/CSS/JS without dependencies. Keyboard-driven pres
 
 ## Capabilities and Constraints
 
-- Four presentation tabs: Overview, SCA, SAA and Synthesis. Open on the clickable framework; retain the selected pair throughout. Slides supply the overview.
-- Next moves directly between the three worked examples. Each screen presents one calculation and decision; intermediate arithmetic is disclosed inline. Explore retains the full lessons and dataset views, with Back to demo returning to the presentation.
+- Five presentation tabs: Overview, SCA, SAA, Synthesis and Output. Open on the clickable framework; retain the selected pair throughout. Slides supply the overview.
+- Next moves directly through the five tabs. The three worked examples present one calculation and decision each; intermediate arithmetic is disclosed inline. Output provides the dataset views. Input and preprocessing details open from Overview, with Back to demo returning to it.
 - SCA: feature-string MinHash, sketch candidates, ranked search results.
 - SAA: attribute Jaccard index and threshold graph.
 - Integrated score: cosine similarity over synthetic byte-block frequency vectors plus attribute Jaccard index; default code weight .60. Five synthetic lineages contain 30, 12, 16, 10 and 7 samples.
-- Output shows a graph, heatmap or exact t-SNE, one at a time. Groups use connected components.
-- Short primary explanations; optional details disclose calculations and settings.
+- Output shows clustering, a readable overview-plus-detail heatmap, or exact t-SNE. Clustering and t-SNE combine animation and inspection in one selectable view, with persistent A/B labels, current settings, Play/Pause, Replay, a 13.3-second timeline and Show final. No explanatory captions. Groups use connected components. No hidden Output panels.
+- Synthesis uses local LaTeX with SCA calculation on the left, SAA calculation on the right, and the combination below; paper-based parameter captions and the code-weight control stay with the combination. Synthesis follows the paper’s pairwise integration flow without invented scenario categories. The SAA panel names overlapping values from the selected synthetic files. SCA and SAA retain their existing content and controls.
 - Synthetic data stays labelled. No efficiency or paper-error material in the main flow.
 
 ## Brand Commitments

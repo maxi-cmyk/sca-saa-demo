@@ -179,6 +179,8 @@
     const y = Array.from({length:n}, () => [(random()-.5)*1e-4, (random()-.5)*1e-4]);
     const velocity = y.map(() => [0,0]), gains = y.map(() => [1,1]);
     const q = y.map(() => new Array(n).fill(0));
+    const snapshot = iteration => { if (options.onIteration) options.onIteration(iteration, y.map(p => ({ x:p[0], y:p[1] }))); };
+    snapshot(0);
     for (let step = 0; step < iterations; step++) {
       let total = 0;
       for (let i=0; i<n; i++) for (let j=i+1; j<n; j++) {
@@ -203,6 +205,7 @@
         const mean = y.reduce((a,p) => a+p[d],0)/n;
         y.forEach(p => { p[d] -= mean; });
       }
+      snapshot(step + 1);
     }
     let total = 0, kl = 0;
     for (let i=0; i<n; i++) for (let j=i+1; j<n; j++) {

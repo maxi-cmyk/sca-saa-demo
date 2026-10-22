@@ -5,7 +5,8 @@
   "description": "Interactive walkthrough of Shared Code Analysis and Shared Attribute Analysis (Vashista & Patro, IEEE Access 2025) for a CS440 presentation.",
   "scripts": {
     "start": "node server.js",
-    "verify": "node tools/verify.js && node tools/verify-walkthrough.js"
+    "build:animations": "node tools/build-animations.js",
+    "verify": "node tools/verify.js && node tools/verify-walkthrough.js && node tools/verify-presentation.js"
   },
   "engines": {
     "node": ">=16"

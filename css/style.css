@@ -844,3 +844,142 @@ table.t th .aside { font-weight: 400; color: var(--faint); margin-left: 0.5rem; 
 
 /* Active tabs change colour without changing label width. */
 .step { font-weight:700; }
+
+/* Desktop presentation refinements. SCA / SAA tabs remain untouched. */
+.synthesis-stage .stage-body { padding-top:.5rem; }
+.synthesis-stage .guide-content { width:100%; max-width:none; }
+.synthesis-demo { width:100%; }
+.synthesis-demo .guide-pair { font-size:1rem; margin:.1rem 0; }
+.synthesis-demo .guide-truth { margin:.1rem 0 .65rem; font-size:.9rem; }
+.synthesis-calculations { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; }
+.calculation-panel { min-width:0; display:flex; flex-direction:column; padding:1rem 1.25rem .85rem; border-radius:10px; background:var(--tray); box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 14px 28px -18px rgba(2,8,18,.9); }
+.synthesis-demo h2 { font-size:1.12rem; margin:0 0 .4rem; }
+.calculation-sca h2 { color:var(--sca); }
+.calculation-saa h2 { color:var(--saa); }
+.calculation-panel p { margin:.2rem 0; font-size:.95rem; line-height:1.4; max-width:70ch; }
+.calculation-inputs { display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap; padding:.55rem 0 .2rem; font-size:.95rem; }
+.calculation-inputs .katex { font-size:1em; }
+.attribute-counts { color:var(--muted); }
+.attribute-counts b { color:var(--text); }
+.calculation-equation { margin-top:auto; font-size:1.2rem; }
+.calculation-equation .katex-display { margin:.45rem 0; text-align:left; }
+.calculation-equation .katex-display > .katex { text-align:left; }
+.synthesis-demo .caption { color:var(--muted); font-size:.88rem; line-height:1.4; }
+.synthesis-combination { margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--rule); }
+.combination-main { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; column-gap:1.25rem; }
+.synthesis-equation { min-width:0; font-size:1.15rem; }
+.synthesis-equation .katex-display { margin:.25rem 0; }
+.combination-decision { display:flex; align-items:center; justify-content:flex-start; gap:.9rem; flex-wrap:wrap; font-size:1rem; }
+.combination-decision > .katex { font-size:1.05em; }
+.combination-takeaway { margin:.4rem 0 .65rem !important; font-size:.95rem; }
+.combination-footer { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:1.25rem; align-items:start; }
+.synthesis-settings { grid-column:1 / -1; display:flex; align-items:center; gap:.65rem; margin:.1rem 0 .5rem; font-size:.88rem; }
+.synthesis-settings label, .synthesis-settings .btn { white-space:nowrap; }
+.synthesis-settings input { width:8rem; }
+.synthesis-settings .btn { font-size:.88rem; }
+.combination-footer p { margin:.15rem 0; }
+.overview-stage .stage-body { overflow:hidden; padding:.6rem .6rem .5rem; }
+.overview-stage .framework-overview { width:100%; max-width:none; height:100%; min-height:0; padding:0; }
+.overview-stage .framework-map { width:100%; height:100%; min-height:0; aspect-ratio:auto; }
+.overview-stage .framework-node { padding:1rem 1.25rem; gap:.4rem; }
+.overview-stage .framework-node > strong, .overview-stage .framework-node > span { width:100%; min-width:0; overflow-wrap:anywhere; text-wrap:balance; }
+.overview-stage .framework-node > strong { font-size:clamp(1rem,1.2vw,1.25rem); line-height:1.2; }
+.overview-stage .framework-node > span { font-size:clamp(.88rem,1vw,1rem); line-height:1.3; }
+.output-stage .stage-body { overflow:hidden; padding-top:.65rem; }
+.output-content { height:100%; min-height:0; display:flex; flex-direction:column; gap:.45rem; }
+.output-toolbar { display:flex; align-items:center; gap:1rem; flex:none; }
+.output-toolbar .seg { flex:none; }
+.output-toolbar .seg button { font-size:.9rem; padding:.35rem .7rem; }
+.output-cutoff { display:flex; align-items:center; gap:.6rem; margin-left:auto; font-size:.9rem; }
+.output-cutoff input { width:8rem; }
+.output-cutoff input:disabled { opacity:.4; cursor:default; }
+.output-cutoff .num { min-width:6rem; }
+.output-pair { display:flex; align-items:center; gap:1rem; flex:none; padding:.35rem 0; border-bottom:1px solid var(--rule); font-size:.88rem; color:var(--muted); }
+.output-pair b { color:var(--text); font-family:var(--mono); font-weight:400; }
+.output-pair .katex { font-size:1em; color:var(--cream); }
+.output-pair > span:nth-child(2) { margin-left:auto; }
+.output-visual { display:flex; flex-direction:column; flex:1; min-height:0; }
+.output-svg { display:block; }
+.output-matrix { display:grid; grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); gap:2rem; flex:1; min-height:0; }
+.output-matrix section { display:flex; flex-direction:column; min-width:0; min-height:0; }
+.output-matrix h2 { font-size:1rem; margin:.35rem 0; }
+.output-matrix p { font-size:.88rem; margin:0 0 .5rem; color:var(--muted); }
+.matrix-overview { width:100%; flex:1; min-height:0; cursor:crosshair; }
+.matrix-detail { width:100%; flex:1; min-height:0; }
+.matrix-cell { cursor:pointer; }
+.matrix-cell:hover rect, .matrix-cell:focus-visible rect { stroke:var(--ground); stroke-width:3px; }
+.matrix-cell:focus-visible { outline:none; }
+.matrix-footer { display:flex; align-items:center; justify-content:space-between; gap:1.5rem; padding-top:.4rem; font-size:.88rem; }
+.matrix-footer .heatmap-scale { width:15rem; margin:0; }
+.matrix-footer p { margin:0; color:var(--muted); }
+
+/* Follow three concrete steps without expanding the full block catalogue. */
+.sca-current-score { float:right; color:var(--white); font-weight:400; }
+.sca-current-score .katex { font-size:1em; }
+.cosine-definition { font-size:1.05rem; }
+.cosine-definition .katex-display { margin:.2rem 0 .4rem; text-align:left; }
+.cosine-definition .katex-display > .katex { text-align:left; }
+.vector-nav { display:flex; align-self:flex-start; margin:0 0 .4rem; }
+.vector-nav button { font-size:.88rem; padding:.22rem .45rem; white-space:nowrap; }
+.vector-stage { min-height:5rem; font-size:.88rem; }
+.vector-stage p { margin:.2rem 0; font-size:.88rem; }
+.code-block-excerpt { width:100%; border-collapse:collapse; font-size:.88rem; }
+.code-block-excerpt caption { text-align:left; color:var(--text); margin:0 0 .2rem; }
+.code-block-excerpt th, .code-block-excerpt td { text-align:left; padding:.15rem .25rem; border-bottom:1px solid var(--rule); }
+.code-block-excerpt thead th { color:var(--muted); font-weight:400; font-size:.88rem; }
+.code-block-excerpt tbody th { font-weight:400; }
+.code-block-excerpt code { font-family:var(--mono); font-size:.88rem; white-space:nowrap; }
+.code-block-excerpt th:first-child, .code-block-excerpt td:nth-last-child(-n+2) { width:2rem; }
+.code-block-excerpt td:nth-last-child(-n+2) { text-align:center; font-family:var(--mono); }
+.code-block-excerpt .katex { font-size:1em; }
+.vector-excerpt .katex-display, .vector-numeric .katex-display { text-align:left; margin:.35rem 0; }
+.vector-excerpt .katex-display > .katex, .vector-numeric .katex-display > .katex { text-align:left; }
+
+
+.synthesis-stage .calculation-panel { padding:.75rem 1rem .65rem; }
+.synthesis-stage .calculation-panel h2 { line-height:1.2; }
+.cosine-definition .katex-display { margin:.1rem 0 .25rem; }
+.vector-nav { margin-top:1.4rem; margin-bottom:.25rem; }
+.vector-numeric { font-size:1rem; }
+
+.synthesis-demo .guide-truth { margin-bottom:.4rem; }
+.synthesis-combination { margin-top:.6rem; padding-top:.6rem; }
+.combination-takeaway { margin:.25rem 0 .35rem !important; }
+.synthesis-settings { margin-bottom:.3rem; }
+.vector-stage p { margin:.1rem 0; }
+
+/* One selectable visualization, from playback through its final frame. */
+.output-motion-chart { flex:1; min-height:0; display:flex; }
+.output-motion-chart > svg { width:100%; height:100%; }
+.output-playback { display:flex; align-items:center; gap:.65rem; flex:none; padding:.6rem 0 .1rem; border-top:1px solid var(--rule); }
+.output-playback input { flex:1; min-width:8rem; }
+.output-playback output { min-width:7rem; font-size:.88rem; font-variant-numeric:tabular-nums; color:var(--muted); }
+.output-playback .motion-phase { min-width:10rem; text-align:right; font-size:.9rem; color:var(--cream); }
+.output-playback .btn { white-space:nowrap; }
+.output-motion-chart .node { cursor:pointer; }
+.output-motion-chart .node:focus-visible circle { stroke:var(--white); stroke-width:4; }
+
+.pair-selectors { display:flex; align-items:center; gap:.6rem; min-width:0; }
+.pair-selectors label { color:var(--text); font-weight:700; font-size:.95rem; }
+.pair-selectors select { width:clamp(12rem,20vw,21rem); min-width:0; max-width:100%; font-family:var(--mono); font-size:.88rem; padding:.3rem .55rem; }
+.pair-selectors label:not(:first-child) { margin-left:.5rem; }
+.synthesis-demo .pair-selectors { justify-content:center; margin:.1rem 0 .15rem; }
+.output-pair .pair-selectors { flex:0 1 auto; }
+.synthesis-demo .pair-selectors { margin:0; }
+.synthesis-demo .pair-selectors select { padding:.15rem .55rem; }
+.synthesis-demo .guide-truth { margin-bottom:.3rem; }
+
+/* Evidence belongs beside the SAA score, rather than in scenario categories. */
+.shared-attribute-examples { margin:.2rem 0 .4rem; }
+.shared-attribute-examples h3 { font-size:.88rem; color:var(--muted); font-weight:400; margin:0 0 .2rem; }
+.shared-attribute-examples dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem 1rem; margin:0; }
+.shared-attribute-examples dt { font-size:.88rem; color:var(--muted); }
+.shared-attribute-examples dd { margin:0; min-width:0; line-height:1.3; }
+.shared-attribute-examples code { font-family:var(--mono); font-size:.88rem; overflow-wrap:anywhere; }
+.synthesis-demo .combination-main { margin-bottom:.35rem; }
+
+.combination-decision .verdict { position:relative; }
+.combination-decision .verdict svg { position:absolute; right:calc(100% + .3rem); }
+
+.synthesis-equation .katex-display, .synthesis-equation .katex-display > .katex { text-align:left; }
+.calculation-saa .calculation-inputs { padding-top:.25rem; }

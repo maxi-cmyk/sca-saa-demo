@@ -9,3 +9,7 @@ test/
 
 # Screenshots
 screenshots/
+
+vendor/ 
+assets/
+fonts/

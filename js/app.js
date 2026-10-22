@@ -34,7 +34,7 @@
     { id:"combine",metric:"final",title:"Combine the two kinds of evidence",lede:"Derive code cosine similarity, then combine it with the attribute Jaccard index.",ref:"Sec. III.C · Eq. 2" },
     { id:"results",metric:"final",title:"Read the analysis output",lede:"Explore the combined scores through one view at a time.",ref:"Sec. IV.G–H · Fig. 8–10" }
   ];
-  const STEP_NAMES = ["Overview","SCA","SAA","Combine","Output"];
+  const STEP_NAMES = ["Overview","SCA","SAA","Synthesis","Output"];
   const TRUTH_FROM = 1;
 
   const K_VALUES = [4, 8, 16, 32, 48, 64, 96, 128, 192, 256];
@@ -42,7 +42,7 @@
 
   // ---------------------------------------------------------------- state --
   const DEFAULTS = {
-    step: 0, explore:false, returnStep:0, inputView:"overview", overviewFocus:null, scaView:"features", saaView:"sets", combineView:"vectors", outputView:"graph", selA: 0, selB: 1, region: null,
+    step: 0, detail:false, returnStep:0, inputView:"overview", overviewFocus:null, scaView:"features", saaView:"sets", combineView:"vectors", outputView:"graph", vectorStep:"blocks", selA: 0, selB: 1, region: null,
     k: 64, theta: 0.7, alpha: 0.6,
     truthOverride: null, drawer: false,
     nameFilter: null, zoom: 1,
@@ -61,6 +61,8 @@
   const idxOf = (name) => SAMPLES.findIndex((s) => s.name === name);
   const shortName = (i) => SAMPLES[i].name.replace(/\.exe$/, "");
   const KEY = D.KEY_PAIRS.map((p) => ({ ...p, i: idxOf(p.a), j: idxOf(p.b) }));
+  DEFAULTS.selA=state.selA=KEY[1].i;
+  DEFAULTS.selB=state.selB=KEY[1].j;
 
   const PE = SAMPLES.map((s) => C.buildPE(s));
   const SIG = SAMPLES.map((s) => C.minhashSignature(s.code, 256));
@@ -154,11 +156,11 @@
     if (msg && !err) statusTimer = setTimeout(() => { el.textContent = ""; }, 4000);
   }
   function renderStatus() {
-    if(!state.explore) {
-      $("#sbStep").textContent = `${state.step+1} / 4`;
+    if(!state.detail) {
+      $("#sbStep").textContent = `${state.step+1} / ${STEPS.length}`;
       $("#btnPrev").disabled = state.step===0;
-      $("#btnNext").disabled = state.step===3;
-      $("#nextLabel").textContent = state.step===3 ? "Finished" : `Next: ${state.step===0?"SCA":state.step===1?"SAA":"Synthesis"}`;
+      $("#btnNext").disabled = state.step===STEPS.length-1;
+      $("#nextLabel").textContent = state.step===STEPS.length-1 ? "Finished" : `Next: ${STEP_NAMES[state.step+1]}`;
       return;
     }
     $("#sbStep").textContent = `${state.step + 1} / ${STEPS.length}`;
@@ -173,7 +175,7 @@
 
   // ------------------------------------------------------------ top bar --
   function renderSteps() {
-    const pages=state.explore ? STEPS.map((s,i)=>[s,i]) : [0,1,2,3].map(i=>[STEPS[i],i]);
+    const pages=STEPS.map((s,i)=>[s,i]);
     $("#steps").innerHTML = pages.map(([s, i]) =>
       `<button class="step${i < state.step ? " done" : ""}" data-step="${i}" ${i === state.step ? 'aria-current="step"' : ""} title="${i+1}. ${esc(i===3?"Synthesis":STEP_NAMES[i])}">
         <span class="n">${i+1}</span><span class="lbl">${esc(i===3?"Synthesis":STEP_NAMES[i])}</span>
@@ -181,25 +183,28 @@
   }
   function renderHead() {
     const s = STEPS[state.step];
+    $("#app").classList.toggle("output-stage",state.step===4);
+    $("#app").classList.toggle("synthesis-stage",state.step===3&&!state.detail);
+    $("#app").classList.toggle("overview-stage",state.step===0&&state.inputView==="overview");
     $("#stepTitle").textContent = s.title;
     $("#stepLede").textContent = s.lede;
     $("#stepRef").textContent = s.ref;
-    if(!state.explore) {
+    if(!state.detail && state.step!==4) {
       $("#stepTitle").textContent = ["The SCA / SAA analysis framework", "SCA: compare code signatures", "SAA: compare attribute sets", "Synthesis: calculate the combined decision"][state.step];
-      $("#stepLede").textContent = ["Select a stage to open a worked example or explore the supporting detail.", "Extract strings → keep hash minima → compare signature positions.", "For the same pair, count shared attributes against all distinct attributes.", "Calculate code cosine similarity separately, then blend it with the attribute Jaccard index."][state.step];
+      $("#stepLede").textContent = ["Select a stage to open its worked example.", "Extract strings → keep hash minima → compare signature positions.", "For the same pair, count shared attributes against all distinct attributes.", "Apply both analyses to the same pair, then combine their similarity scores."][state.step];
       $("#btnFramework").hidden=true;
       $("#app").classList.add("guided");
       document.title=`${state.step+1}. ${state.step===3?"Synthesis":STEP_NAMES[state.step]} · SCA / SAA Explorer`;
       return;
     }
     const overview=state.step===0&&state.inputView==="overview";
-    $("#btnFramework").hidden=false;
+    $("#btnFramework").hidden=!state.detail;
     if(state.step===0) {
       $("#stepTitle").textContent=overview?"The SCA / SAA analysis framework":state.inputView==="preprocess"?"Preprocessing: prepare the features":"Input data: executable samples";
       $("#stepLede").textContent=overview?"Follow the complete workflow, or select any stage to explore it in depth.":state.inputView==="preprocess"?"Validate the executable, then build the representations used by each analysis.":`${N} fictional samples provide code-related and attribute-related evidence.`;
     }
-    if(state.step===4&&state.outputView==="graph") $("#stepTitle").textContent="Relationships and clustering";
-    if(state.step===4&&state.outputView==="scatter") $("#stepTitle").textContent="t-SNE map and results interpretation";
+    if(state.step===4) { $("#stepTitle").textContent={graph:"Watch the samples form groups",heatmap:"Inspect the similarity scores",scatter:"Watch the t-SNE projection settle"}[state.outputView]; $("#stepLede").textContent="75 synthetic samples · one combined similarity matrix · three ways to read it."; }
+
 
     $("#app").classList.add("guided");
     $("#mTruth").setAttribute("aria-checked", String(truthOn()));
@@ -753,7 +758,8 @@
   // Each lesson reveals its calculation, then its output. Only one is visible.
   const GUIDE_LABELS = ["Related variants", "Rewritten code", "Reused code", "Similar attributes"];
   const examples = () => `<div class="guide-examples"><span>Example</span><div class="seg" role="group" aria-label="Example pairs">${KEY.map((p,n) => `<button data-pair="${n}" aria-pressed="false" title="${esc(p.a)} compared with ${esc(p.b)}">${GUIDE_LABELS[n]}</button>`).join("")}</div></div>`;
-  const pairName = () => `<div class="guide-pair">A: ${esc(shortName(state.selA))}<span>compared with</span>B: ${esc(shortName(state.selB))}</div><p class="guide-truth">Known synthetic relationship: <b>${SAMPLES[state.selA].family===SAMPLES[state.selB].family ? "same family — expected link" : "different families — expected no link"}</b>.</p>`;
+  const pairSelectors = () => `<div class="pair-selectors" role="group" aria-label="Choose samples to compare">${["A","B"].map(letter=>`<label for="pair${letter}">${letter}</label><select id="pair${letter}" data-ctl="sel${letter}" aria-label="Sample ${letter}">${sampleOptions(state[`sel${letter}`])}</select>`).join("")}</div>`;
+  const pairName = (editable=false) => `${editable?pairSelectors():`<div class="guide-pair">A: ${esc(shortName(state.selA))}<span>compared with</span>B: ${esc(shortName(state.selB))}</div>`}<p class="guide-truth">Known synthetic relationship: <b>${SAMPLES[state.selA].family===SAMPLES[state.selB].family ? "same family — expected link" : "different families — expected no link"}</b>.</p>`;
   const takeaway = text => `<p class="guide-takeaway">${text}</p>`;
   const guideShell = content => `<div class="guide-content">${content}</div>`;
   const scoreBar = (label, score, kind) => `<div class="guide-score"><b class="t-${kind}">${label}</b><div class="guide-track"><i style="left:${state.theta*100}%" aria-hidden="true"></i><span style="width:${score*100}%;background:${COL[kind]}"></span></div><strong class="num">${f2(score)}</strong><span class="guide-decision">${score >= state.theta ? "linked" : "apart"}</span></div>`;
@@ -764,31 +770,33 @@
     combine: { key: "combineView", scenes: [["vectors", "Code vectors"], ["products", "Products & sums"], ["cosine", "Cosine similarity"], ["blend", "Weighted combination"]] }
   };
   const FRAMEWORK = [
-    { id:"input", label:"Input data", detail:"Executable samples", step:0, key:"inputView", scene:"input", box:[0,110,150,68] },
-    { id:"preprocess", label:"Preprocessing", detail:"Validate and extract features", step:0, key:"inputView", scene:"preprocess", box:[210,110,175,68] },
-    { id:"sca", label:"SCA", detail:"Shared Code Analysis", step:1, key:"scaView", scene:"features", box:[460,20,170,68] },
-    { id:"saa", label:"SAA", detail:"Shared Attribute Analysis", step:2, key:"saaView", scene:"sets", box:[460,200,170,68] },
-    { id:"integrate", label:"Integrated similarity computation", detail:"Cosine similarity + Jaccard index", step:3, key:"combineView", scene:"vectors", box:[745,100,255,90] },
-    { id:"cluster", label:"Clustering and anomaly detection", detail:"Threshold links and find groups", step:4, key:"outputView", scene:"graph", box:[745,300,255,75] },
-    { id:"visualize", label:"Visualization", detail:"Graph, matrix and t-SNE", step:4, key:"outputView", scene:"graph", box:[475,310,170,65] },
-    { id:"interpret", label:"Results interpretation", detail:"Read relationships and limits", step:4, key:"outputView", scene:"scatter", box:[210,310,195,65] }
+    { id:"input", label:"Input data", detail:"Executable samples", step:0, key:"inputView", scene:"input", box:[0,150,160,120] },
+    { id:"preprocess", label:"Preprocessing", detail:"Validate and extract features", step:0, key:"inputView", scene:"preprocess", box:[200,150,190,120] },
+    { id:"sca", label:"SCA", detail:"Shared Code Analysis", step:1, key:"scaView", scene:"features", box:[450,10,190,110] },
+    { id:"saa", label:"SAA", detail:"Shared Attribute Analysis", step:2, key:"saaView", scene:"sets", box:[450,270,190,110] },
+    { id:"integrate", label:"Integrated similarity computation", detail:"Cosine similarity + Jaccard index", step:3, key:"combineView", scene:"vectors", box:[730,140,270,140] },
+    { id:"cluster", label:"Clustering and anomaly detection", detail:"Threshold links and find groups", step:4, key:"outputView", scene:"graph", box:[730,400,270,120] },
+    { id:"visualize", label:"Visualization", detail:"Graph, matrix and t-SNE", step:4, key:"outputView", scene:"graph", box:[450,400,190,120] },
+    { id:"interpret", label:"Results interpretation", detail:"Read relationships and limits", step:4, key:"outputView", scene:"scatter", box:[200,400,190,120] }
   ];
   function frameworkOverview() {
-    const paths=["M150 144H210","M385 134H415V54H460","M385 158H420V234H460","M630 54H690V123H745","M630 234H695V166H745","M872 190V300","M745 342H645","M475 342H405"];
-    return `<div class="guide-content framework-overview"><div class="framework-map" aria-label="SCA and SAA framework. Input data flows through preprocessing into parallel SCA and SAA analysis, then integrated similarity, clustering, visualization and interpretation."><svg class="framework-connections" viewBox="0 0 1000 380" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="framework-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs>${paths.map(d=>`<path d="${d}" marker-end="url(#framework-arrow)"/>`).join("")}</svg>${FRAMEWORK.map(node=>{
+    const paths=["M160 210H200","M390 195H420V65H450","M390 225H420V325H450","M640 65H690V180H730","M640 325H690V240H730","M865 280V400","M730 460H640","M450 460H390"];
+    return `<div class="guide-content framework-overview"><div class="framework-map" aria-label="SCA and SAA framework. Input data flows through preprocessing into parallel SCA and SAA analysis, then integrated similarity, clustering, visualization and interpretation."><svg class="framework-connections" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="framework-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs>${paths.map(d=>`<path d="${d}" marker-end="url(#framework-arrow)"/>`).join("")}</svg>${FRAMEWORK.map(node=>{
       const [x,y,w,h]=node.box;
-      return `<button class="framework-node node-${node.id}" data-framework="${node.id}" style="left:${x/10}%;top:${y/3.8}%;width:${w/10}%;height:${h/3.8}%" aria-label="Explore ${esc(node.label)}"><strong>${node.label}</strong><span>${node.detail}</span></button>`;
+      return `<button class="framework-node node-${node.id}" data-framework="${node.id}" style="left:${x/10}%;top:${y/5.2}%;width:${w/10}%;height:${h/5.2}%" aria-label="Explore ${esc(node.label)}"><strong>${node.label}</strong><span>${node.detail}</span></button>`;
     }).join("")}</div></div>`;
   }
   function openFramework(id) {
     const node=FRAMEWORK.find(n=>n.id===id); if(!node) return;
-    if(!state.explore && (node.step===0 || node.step===4)) { state.returnStep=0; state.explore=true; }
+    state.detail=node.step===0;
+    state.returnStep=0;
     state.overviewFocus=id;
     goStep(node.step);
     state[node.key]=node.scene;
     renderHead(); renderStage(false); refreshAll();
   }
   function returnFramework() {
+    state.detail=false;
     goStep(0); state.inputView="overview"; renderHead(); renderStage(false); refreshAll();
   }
   function zoomFramework(id) {
@@ -856,12 +864,141 @@
     if(!shareSketch(i,j,state.k)) return `${decision(false,same)} Selected pair: skipped by sketch lookup; not scored in this search.`;
     return `${pairOutcome("sca")} Selected pair was retrieved by sketch lookup.`;
   }
-  const projectionCache = new Map();
-  function projectionOf(m) {
-    const key=JSON.stringify(m);
-    if (!projectionCache.has(key)) { if(projectionCache.size>20) projectionCache.clear(); projectionCache.set(key,C.tsne2d(m,{perplexity:N>25?15:3,seed:440,iterations:1000})); }
-    return projectionCache.get(key);
+  // Desktop presentation: formulas, evidence and full-stage output.
+  const P = window.Presentation;
+  const tex = (source, block = false) => window.katex.renderToString(source, { displayMode:block, throwOnError:true, output:"htmlAndMathml" });
+  const paperThreshold = () => `Default ${tex(String.raw`\theta=0.70`)}: within the paper’s precision–recall balance range of ${tex(String.raw`0.70\text{–}0.80`)} (Sec. IV.C).`;
+  function sharedAttributeExamples(shared) {
+    const chosen=[];
+    for(const kind of ['api','net','mutex','file','reg','cmd','ua','ext','note']) {
+      const item=shared.find(value=>cat(value)===kind);
+      if(item&&chosen.length<4)chosen.push(item);
+    }
+    for(const item of shared)if(chosen.length<4&&!chosen.includes(item))chosen.push(item);
+    const names={api:'API name',net:'Network indicator',mutex:'Mutex',file:'File path',reg:'Registry key',cmd:'Command',ua:'User agent',ext:'File extension',note:'Note filename'};
+    return `<section class="shared-attribute-examples" aria-label="Attributes present in both samples"><h3>Shared attributes${shared.length?` · ${chosen.length} of ${shared.length} shown`:''}</h3>${chosen.length?`<dl>${chosen.map(item=>`<div><dt>${names[cat(item)]||'Attribute'}</dt><dd><code data-shared-attribute="${esc(item)}">${esc(item.slice(item.indexOf(':')+1))}</code></dd></div>`).join('')}</dl>`:'<p>None: these samples have no attribute values in common.</p>'}</section>`;
   }
+  function vectorConstruction(d) {
+    const chosen=[];
+    for(const group of [d.terms.filter(t=>t.a&&t.b),d.terms.filter(t=>t.a&&!t.b),d.terms.filter(t=>!t.a&&t.b),d.terms]) {
+      const term=group.find(t=>!chosen.includes(t));if(term&&chosen.length<2)chosen.push(term);
+    }
+    const feature=t=>`f_{${d.terms.indexOf(t)+1}}`;
+    const codeBlock=t=>t.key.match(/.{1,8}/g).join(" ");
+    let content;
+    if(state.vectorStep==="vectors") {
+      const preview=d.terms.slice(0,6), last=d.terms[d.terms.length-1];
+      const tail=axis=>d.terms.length>preview.length?String.raw`,\ldots,${last[axis]}`:"";
+      content=`<p>Each coordinate is a block’s occurrence count, in the same feature order.</p><div class="vector-excerpt">${tex(String.raw`\mathbf a^{T}=[${preview.map(t=>t.a).join(",")}${tail("a")}],\qquad\mathbf b^{T}=[${preview.map(t=>t.b).join(",")}${tail("b")}]`,true)}</div><p class="caption">First ${preview.length} and final coordinate (${d.terms.length}) shown; 0 = absent. All ${d.terms.length} enter cosine similarity.</p>`;
+    } else if(state.vectorStep==="cosine") {
+      content=`<div class="vector-numeric">${tex(String.raw`\frac{${d.dot}}{\sqrt{${d.squareA}}\sqrt{${d.squareB}}}\approx ${f3(d.similarity)}`,true)}</div><p class="caption">Across all ${d.terms.length} positions: ${tex(String.raw`\sum a_i b_i=${d.dot},\quad\sum a_i^2=${d.squareA},\quad\sum b_i^2=${d.squareB}`)}.</p>`;
+    } else {
+      content=`<table class="code-block-excerpt" aria-label="Actual 16-byte code blocks and their occurrence counts"><thead><tr><th>Feature</th><th>Actual block bytes · hex (${chosen.length}/${d.terms.length} shown)</th><th>A</th><th>B</th></tr></thead><tbody>${chosen.map(t=>`<tr><th scope="row" title="${esc(BLOCK_LABELS.get(t.key)||t.key)}">${tex(feature(t))}</th><td><code title="${esc(BLOCK_LABELS.get(t.key)||t.key)}">${codeBlock(t)}</code></td><td>${t.a}</td><td>${t.b}</td></tr>`).join("")}</tbody></table>`;
+    }
+    return `<div class="cosine-definition" title="Code cosine similarity, calculated independently of MinHash">${tex(String.raw`S_{\mathrm{code}}=\cos(\mathbf a,\mathbf b)=\frac{\mathbf a\cdot\mathbf b}{\lVert\mathbf a\rVert\,\lVert\mathbf b\rVert}`,true)}</div><div class="seg vector-nav" role="group" aria-label="Build the code vectors">${[["blocks","1. Blocks → counts"],["vectors","2. Counts → vectors"],["cosine","3. Cosine similarity"]].map(([id,label])=>`<button data-vector-step="${id}" aria-pressed="${state.vectorStep===id}">${label}</button>`).join("")}</div><div class="vector-stage" aria-live="polite">${content}</div>`;
+  }
+  function synthesisBody() {
+    const d=C.cosineDetails(CODE_VECTORS[state.selA],CODE_VECTORS[state.selB]), a=SAMPLES[state.selA],b=SAMPLES[state.selB],r=C.jaccard(a.attrs,b.attrs),fin=finalM()[state.selA][state.selB],linked=fin>=state.theta,same=a.family===b.family;
+    return `${pairName(true)}<div class="synthesis-calculations"><section class="calculation-panel calculation-sca" aria-labelledby="scaCalculationTitle"><h2 id="scaCalculationTitle">SCA calculation <span class="sca-current-score">${tex(String.raw`\approx ${f3(d.similarity)}`)}</span></h2>${vectorConstruction(d)}</section><section class="calculation-panel calculation-saa" aria-labelledby="saaCalculationTitle"><h2 id="saaCalculationTitle">SAA calculation</h2><div class="calculation-inputs attribute-counts"><span>Only A: <b>${r.onlyA.length}</b></span><span>Shared: <b>${r.inter}</b></span><span>Only B: <b>${r.onlyB.length}</b></span></div>${sharedAttributeExamples(r.shared)}<div class="calculation-equation">${tex(String.raw`S_{\mathrm{attributes}}=\frac{|A\cap B|}{|A\cup B|}=\frac{${r.inter}}{${r.union}}\approx ${f3(r.j)}`,true)}</div></section></div><section class="synthesis-combination" aria-labelledby="combinationTitle"><h2 id="combinationTitle">Combination</h2><div class="combination-main"><div class="synthesis-equation">${tex(String.raw`S_{\mathrm{final}}=${f2(state.alpha)}\times ${f3(d.similarity)}+${f2(1-state.alpha)}\times ${f3(r.j)}\approx ${f3(fin)}`,true)}</div><div class="combination-decision">${decision(linked,same)}${tex(String.raw`${f3(fin)} ${linked?"\\ge":"<"} ${f2(state.theta)}\;\Rightarrow\;\text{${linked?"link":"no link"}}`)}</div></div><div class="combination-footer"><div class="synthesis-settings"><label for="alpha">Code / attribute weight</label><input id="alpha" type="range" min="0" max="1" step="0.05" value="${state.alpha}" data-ctl="alpha"><span>${tex(String.raw`${f2(state.alpha)}\,/\,${f2(1-state.alpha)}`)}</span><button class="btn" data-alpha="0.6">Reset weights</button></div><p class="caption">The paper experimentally uses ${tex(String.raw`0.60`)} for code and ${tex(String.raw`0.40`)} for attributes (Eq. 2).</p><p class="caption">${paperThreshold()}</p></div></section>`;
+  }
+  let outputPlayback={key:null,time:0,playing:false,token:0,paint:null};
+  function outputShell() {
+    return `<div class="output-content"><div class="output-toolbar"><div class="seg" role="group" aria-label="Analysis view">${[["graph","Clustering"],["heatmap","Similarity matrix"],["scatter","t-SNE"]].map(([id,label])=>`<button data-analysis="${id}" aria-pressed="${state.outputView===id}">${label}</button>`).join("")}</div><div class="output-cutoff"><label for="theta">${state.outputView==="scatter"?"Group cutoff":"Link cutoff"}</label><input id="theta" type="range" min="0.5" max="0.9" step="0.05" value="${state.theta}" data-ctl="theta"><span class="num" data-bind="theta">${f2(state.theta)}</span></div></div><div id="outputPair" class="output-pair"></div><div id="guideAnalysis" class="output-visual"></div></div>`;
+  }
+  const motionReduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function drawOutputMotion(host,m) {
+    const movie=P.motion(m,state.theta,state.outputView),key=JSON.stringify([state.outputView,state.theta,state.alpha]);
+    if(outputPlayback.key!==key)outputPlayback={key,time:motionReduced()?movie.duration:0,playing:!motionReduced(),token:outputPlayback.token+1};
+    const token=++outputPlayback.token;
+    host.innerHTML=`<div class="output-motion-chart" id="motionChart"></div><div class="output-playback"><button class="btn" data-playback="toggle" id="motionToggle">${outputPlayback.playing?"Pause":"Play"}</button><button class="btn" data-playback="replay">Replay</button><label class="sr" for="motionProgress">Animation progress</label><input id="motionProgress" data-motion-progress type="range" min="0" max="${movie.duration}" step="0.05" value="${outputPlayback.time}"><output id="motionTime"></output><button class="btn" data-playback="final">Show final</button><span id="motionPhase" class="motion-phase"></span></div>`;
+    const svg=svgEl('svg',{class:'output-svg',viewBox:`0 0 ${movie.width} ${movie.height}`,role:'group','aria-label':state.outputView==='scatter'?'Interactive t-SNE map':'Interactive similarity graph'});
+    const edgeLayer=svgEl('g'),nodeLayer=svgEl('g'),selectedLayer=svgEl('g');svg.append(edgeLayer,nodeLayer,selectedLayer);
+    const lines=movie.info.edges.map(e=>{const line=svgEl('line',{stroke:COL.edge,'stroke-width':1.5,'stroke-opacity':.25});edgeLayer.append(line);return {line,e};});
+    const nodes=SAMPLES.map((sample,i)=>{
+      const selected=i===state.selA||i===state.selB;
+      const g=svgEl('g',{class:'node',tabindex:0,role:'button','aria-label':`${sample.name}${selected?i===state.selA?', selected A':', selected B':''}`});g.dataset.i=i;
+      const title=svgEl('title');title.textContent=sample.name;g.append(title);
+      const circle=svgEl('circle',{r:selected?11:7,stroke:selected?COL.white:COL.cream,'stroke-width':selected?3:1.5});g.append(circle);
+      if(selected){const label=svgEl('text',{x:17,y:i===state.selA?-15:26,'font-size':20,fill:COL.white,'paint-order':'stroke',stroke:COL.ground,'stroke-width':5});label.textContent=i===state.selA?'A':'B';g.append(label);}
+      (selected?selectedLayer:nodeLayer).append(g);return {g,circle,selected};
+    });
+    $('#motionChart').append(svg);
+    const progress=$('#motionProgress'),clock=$('#motionTime'),phase=$('#motionPhase'),toggle=$('#motionToggle');
+    function paint() {
+      const frame=movie.frame(outputPlayback.time),shown=new Set(frame.edges.map(e=>`${e.a}:${e.b}`));
+      lines.forEach(({line,e})=>{const a=frame.points[e.a],b=frame.points[e.b];for(const [name,value] of Object.entries({x1:a.x,y1:a.y,x2:b.x,y2:b.y,visibility:shown.has(`${e.a}:${e.b}`)?'visible':'hidden'}))line.setAttribute(name,value);});
+      nodes.forEach(({g,circle,selected},i)=>{const p=frame.points[i],color=frame.colored?movie.info.colors[i]:null;g.setAttribute('transform',`translate(${p.x} ${p.y})`);circle.setAttribute('fill',color||COL.ground);circle.setAttribute('stroke',selected?COL.white:color||COL.cream);circle.setAttribute('stroke-dasharray',frame.colored&&!color?'3 3':'');});
+      progress.value=outputPlayback.time;
+      progress.setAttribute('aria-valuetext',`${outputPlayback.time.toFixed(1)} of ${movie.duration.toFixed(1)} seconds`);
+      clock.textContent=`${outputPlayback.time.toFixed(1)} / ${movie.duration.toFixed(1)} s`;
+      phase.textContent=frame.iteration===null?frame.phase:`${frame.phase} · ${frame.iteration}/1000`;
+      toggle.textContent=outputPlayback.playing?'Pause':'Play';
+      toggle.setAttribute('aria-label',outputPlayback.playing?'Pause animation':'Play animation');
+    }
+    outputPlayback.paint=paint;paint();
+    let previous=null,pending=false;
+    function schedule(){if(!pending&&outputPlayback.playing&&typeof requestAnimationFrame==='function'){pending=true;requestAnimationFrame(tick);}}
+    function tick(now) {
+      pending=false;
+      if(token!==outputPlayback.token||state.step!==4||svg.isConnected===false)return;
+      if(document.hidden)outputPlayback.playing=false;
+      if(outputPlayback.playing&&previous!==null){outputPlayback.time=Math.min(movie.duration,outputPlayback.time+Math.min(.1,(now-previous)/1000));if(outputPlayback.time===movie.duration)outputPlayback.playing=false;paint();}
+      previous=now;
+      if(!outputPlayback.playing){paint();return;}
+      schedule();
+    }
+    outputPlayback.start=()=>{previous=null;schedule();};
+    schedule();
+  }
+  function drawOutputMatrix(host,m,height) {
+    const indices=P.neighbourhood(state.selA,state.selB,N), cell=44, padX=60,padY=40;
+    const overviewSize=Math.max(220,Math.min(height-70,host.clientWidth*.4)),oc=overviewSize/N;
+    const overview=svgEl("svg",{viewBox:`0 0 ${overviewSize} ${overviewSize}`,width:overviewSize,height:overviewSize,preserveAspectRatio:"xMidYMid meet",class:"matrix-overview",role:"img","aria-label":"Overview of all 75 by 75 combined similarity scores"});
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+      const rect=svgEl("rect",{x:j*oc,y:i*oc,width:oc+.1,height:oc+.1,fill:P.color(m[i][j]).fill});
+      const title=svgEl("title");title.textContent=`${shortName(i)} × ${shortName(j)}: ${f3(m[i][j])}`;rect.append(title);overview.append(rect);
+    }
+    for(const [i,j] of [[state.selA,state.selB],[state.selB,state.selA]])overview.append(svgEl("rect",{x:j*oc-2,y:i*oc-2,width:oc+4,height:oc+4,fill:"none",stroke:COL.ground,"stroke-width":2}));
+    const box=document.createElement("section");box.className="matrix-overview-panel";box.innerHTML=`<h2>All ${N} samples</h2><p class="caption">Select a region to inspect its scores.</p>`;box.append(overview);
+    overview.addEventListener("click",ev=>{
+      const transform=overview.getScreenCTM(); if(!transform)return;
+      const point=overview.createSVGPoint();point.x=ev.clientX;point.y=ev.clientY;
+      const local=point.matrixTransform(transform.inverse());
+      if(local.x<0||local.y<0||local.x>=overviewSize||local.y>=overviewSize)return;
+      const i=Math.floor(local.y/oc),j=Math.floor(local.x/oc);
+      if(i!==j)setPair(i,j);
+    });
+    const width=padX+indices.length*cell+8,h=padY+indices.length*cell+8;
+    const detail=svgEl("svg",{viewBox:`0 0 ${width} ${h}`,width,height:h,preserveAspectRatio:"xMidYMid meet",class:"matrix-detail",role:"group","aria-label":"Magnified neighbourhood of the selected pair with exact scores"});
+    indices.forEach((i,row)=>{
+      const label=svgEl("text",{x:padX-8,y:padY+(row+.5)*cell,"text-anchor":"end","dominant-baseline":"central","font-size":14,fill:i===state.selA||i===state.selB?COL.cream:COL.text});label.textContent=`#${String(i+1).padStart(3,"0")}`;detail.append(label);
+      const top=svgEl("text",{x:padX+(row+.5)*cell,y:padY-12,"text-anchor":"middle","font-size":15,fill:i===state.selA||i===state.selB?COL.cream:COL.text});top.textContent=`#${String(i+1).padStart(3,"0")}`;detail.append(top);
+      indices.forEach((j,col)=>{
+        const colors=P.color(m[i][j]),selected=(i===state.selA&&j===state.selB)||(j===state.selA&&i===state.selB),g=svgEl("g",{class:"matrix-cell",tabindex:i===j?-1:0,role:"button","aria-label":`${shortName(i)} and ${shortName(j)}: ${f3(m[i][j])}`});
+        g.dataset.matrixA=i;g.dataset.matrixB=j;
+        g.append(svgEl("rect",{x:padX+col*cell,y:padY+row*cell,width:cell-1,height:cell-1,fill:colors.fill,stroke:selected?COL.ground:"none","stroke-width":selected?4:0}));
+        const t=svgEl("text",{x:padX+(col+.5)*cell,y:padY+(row+.5)*cell,"text-anchor":"middle","dominant-baseline":"central","font-size":16,fill:colors.ink});t.textContent=f2(m[i][j]);g.append(t);detail.append(g);
+      });
+    });
+    const zoom=document.createElement("section");zoom.className="matrix-zoom-panel";zoom.innerHTML=`<h2>Selected neighbourhood · ${indices.length} samples</h2>`;zoom.append(detail);
+    host.append(box,zoom);
+  }
+  function refreshOutput() {
+    const m=finalM();
+    $("#outputPair").hidden=false;
+    const height=Math.max(220,bodyH()-145);
+    const shell=$("#stage .output-content");
+    if(!shell)return;
+    const score=m[state.selA][state.selB];
+    $("#outputPair").innerHTML=`${pairSelectors()}<span>${tex(String.raw`S_{\mathrm{final}}=${f3(score)}`)} · ${score>=state.theta?"linked":"no direct link"} at ${tex(String.raw`\theta=${f2(state.theta)}`)}</span>`;
+    const host=$("#guideAnalysis");
+    if(state.outputView==="heatmap") {
+      host.innerHTML=`<div class="output-matrix" id="outputMatrix"></div><div class="matrix-footer"><div class="heatmap-scale"><span>0 · low</span><span class="heatmap-ramp"></span><span>1 · high</span></div><p>Deeper red means greater similarity. Outlines mark the selected pair; numbers identify specimens.</p></div>`;
+      drawOutputMatrix($("#outputMatrix"),m,height);return;
+    }
+    drawOutputMotion(host,m);
+  }
+
   const GUIDES = {
     features: {
       render() {
@@ -928,32 +1065,12 @@
       }
     },
     results: {
-      render() { return guideShell(`<div class="guide-toolbar"><div class="seg" role="group" aria-label="Analysis view">${[["graph","Relationships & clustering"],["heatmap","Similarity matrix"],["scatter","t-SNE & interpretation"]].map(([id,label])=>`<button data-analysis="${id}" aria-pressed="${state.outputView===id}">${label}</button>`).join("")}</div><div class="guide-query"><label for="theta">${state.outputView==="scatter"?"Graph cutoff · colours only":"Link cutoff"}</label><input id="theta" type="range" min="0.5" max="0.9" step="0.05" value="${state.theta}" data-ctl="theta"><b class="num" data-bind="theta">${f2(state.theta)}</b></div></div>${state.outputView==="heatmap"?`<div class="guide-query"><label for="selA">Sample A</label><select id="selA" data-ctl="selA">${sampleOptions(state.selA)}</select><label for="selB">Sample B</label><select id="selB" data-ctl="selB">${sampleOptions(state.selB)}</select></div>`:""}<div id="guideAnalysis"></div>`); },
-      refresh() {
-        const fin=finalM(),info=clusterInfo(fin),un=SAMPLES.filter((s,i)=>!info.style[i].placed);
-        const height=window.innerWidth<=900?320:Math.max(280,Math.min(360,bodyH()-200));
-        if(state.outputView==="graph") {
-          const groups=new Map();
-          SAMPLES.forEach((sample,i)=>{if(info.style[i].placed){const label=info.style[i].label;if(!groups.has(label))groups.set(label,[]);groups.get(label).push(shortName(i));}});
-          const lists=`<dl class="framework-groups">${[...groups].map(([label,items])=>`<div><dt>${label}</dt><dd>${N>25?`${items.length} samples`:items.map(esc).join(", ")}</dd></div>`).join("")}<div><dt>Unplaced samples</dt><dd>${un.slice(0,4).map(sample=>esc(sample.name)).join(", ")||"None"}${un.length>4?` · +${un.length-4} more`:""}</dd></div></dl>`;
-          $("#guideAnalysis").innerHTML=`<div class="map-interpretation"><section aria-label="Thresholded relationship graph"><div class="lesson-chart" id="analysisChart"></div><p class="caption">A line connects a pair whose combined similarity is at least ${f2(state.theta)}. Node positions are arranged for readability.</p></section><section class="map-reading"><h2>Clusters are connected components</h2>${lists}<p class="caption">All ${N} nodes are shown. Hover for names; select a node or use Specimens to inspect its features.</p><p>Samples connected by links, directly or through a chain, belong to the same group.</p><p><b>Unplaced:</b> no links pass the cutoff. These samples are candidates for further review.</p></section></div>${takeaway(`<b>${info.edges.length} links · ${info.clusters} groups · ${un.length} unplaced.</b> Changing the cutoff changes links and can merge or split groups.`)}<details class="guide-details"><summary>Graph interpretation and metrics</summary><div id="analysisDetails"></div></details>`;
-          drawGraph($("#analysisChart"),{id:"combined-output",info,height,labels:false,aria:"Combined similarity relationships and connected-component clusters"});
-          const cen=C.centrality(N,info.edges),order=Array.from({length:N},(_,i)=>i).sort((a,b)=>cen.degree[b]-cen.degree[a]||cen.betweenness[b]-cen.betweenness[a]);
-          $("#analysisDetails").innerHTML=`<p>Graph groups indicate shared characteristics; family membership requires additional evidence. Isolation alone does not establish novelty or a zero-day threat. This demo illustrates anomaly review through isolated samples.</p><table class="t"><thead><tr><th>Most connected</th><th class="r">Links</th><th class="r">Betweenness</th></tr></thead><tbody>${order.slice(0,3).map(i=>`<tr><td>${esc(shortName(i))}</td><td class="r num">${cen.degree[i]}</td><td class="r num">${f3(cen.betweenness[i])}</td></tr>`).join("")}</tbody></table><p>Degree counts links; betweenness measures how often a node bridges shortest paths.</p>`;
-        } else if(state.outputView==="heatmap") {
-          $("#guideAnalysis").innerHTML=`<p class="matrix-pair">${esc(shortName(state.selA))} × ${esc(shortName(state.selB))}: <b class="num">${f3(fin[state.selA][state.selB])}</b> combined similarity</p><div class="lesson-chart matrix-chart" id="analysisChart"></div><div class="heatmap-scale" aria-label="Similarity colour scale from 0 to 1"><span>0 · low similarity</span><span class="heatmap-ramp" aria-hidden="true"></span><span>1 · high similarity</span></div>${takeaway("<b>One cell, one pair.</b> Deeper red means higher similarity; outlined cells meet the cutoff.")}<p class="caption">All ${N} × ${N} scores are shown. Every tenth axis label is shown; hover a cell or select two samples for an exact score.</p><details class="guide-details"><summary>Which scores are shown?</summary><p>Every cell uses S_final = ${f2(state.alpha)} × code cosine similarity + ${f2(1-state.alpha)} × attribute Jaccard index. The cutoff changes cell outlines and graph groups, not the scores.</p></details>`;
-          drawHeatmap($("#analysisChart"),fin,{maxH:Math.max(480,Math.min(640,bodyH()-140)),maxCell:64,minWidth:620,labelSize:1.05,pair:[state.selA,state.selB],onPick:(i,j)=>setPair(i,j),aria:`Combined ${N} by ${N} pairwise similarity matrix`});
-        } else {
-          const points=projectionOf(fin);
-          $("#guideAnalysis").innerHTML=`<div class="map-interpretation"><section aria-label="t-SNE projection"><div class="lesson-chart" id="analysisChart"></div><p class="caption">Positions are calculated from the full combined-similarity matrix, including pairs below the graph cutoff.</p></section><section class="map-reading"><h2>Read the projection</h2><p><b>Position:</b> t-SNE places samples in 2-D to approximately preserve local similarity neighbourhoods.</p><p><b>Colour:</b> inherited from the relationship graph’s groups. t-SNE supplies the layout; connected components supply the group labels.</p><p><b>Cutoff:</b> changing it updates colours while positions stay fixed.</p><p><b>Distance:</b> nearby points suggest local similarity. Axis values, large gaps and apparent group sizes have no direct family meaning.</p></section></div>${takeaway("Use the relationship graph to inspect thresholded links and clusters. Use t-SNE to explore local similarity structure across all samples.")}<details class="guide-details"><summary>Projection settings and interpretation</summary><p>Exact t-SNE; distances = 1 − combined similarity, perplexity ${N>25?15:3}, 1,000 iterations, seed 440. KL divergence: ${f3(points.kl)}. Graph groups indicate shared characteristics; family membership requires additional evidence. Synthetic illustration, not the paper’s original Figure 8.</p></details>`;
-          drawScatter($("#analysisChart"),points,info,height);
-        }
-        $$("[data-analysis]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.analysis===state.outputView)));
-      }
+      render: outputShell,
+      refresh: refreshOutput
     }
   };
   function compactShell() {
-    return guideShell(`<div class="compact-demo">${examples()}<div id="guideCalculation"></div></div>`);
+    return guideShell(`<div class="compact-demo${state.step===3?" synthesis-demo":""}">${state.step===3?"":examples()}<div id="guideCalculation"></div></div>`);
   }
   function renderCompact() {
     const i=state.selA,j=state.selB,k=state.k;
@@ -967,8 +1084,8 @@
       const sampleList=(label,items)=>`<section><h3>${label} <span class="num">(${items.length})</span></h3><p>${items.slice(0,3).map(x=>`<code>${esc(x)}</code>`).join("<br>")||"None"}${items.length>3?`<br><span class="caption">+ ${items.length-3} more</span>`:""}</p></section>`;
       body=`<div class="feature-sets attribute-sets">${sampleList("Only A",r.onlyA)}${sampleList("Shared",r.shared)}${sampleList("Only B",r.onlyB)}</div><p class="guide-sum">${r.inter} shared ÷ ${r.union} distinct attributes = <b class="t-saa">${f3(r.j)}</b> Jaccard index</p>${takeaway(`${pairOutcome("saa")} ${methodReason("saa")}`)}<details class="guide-details"><summary>Inspect all extracted attributes</summary>${setColumns("attrs")}</details>`;
     } else {
-      const d=C.cosineDetails(CODE_VECTORS[i],CODE_VECTORS[j]),fin=finalM()[i][j];
-      body=`<p class="compact-source"><b>Code blocks → count vectors → cosine similarity.</b> This code score is calculated independently of MinHash.</p><p class="compact-cosine">Cosine similarity = A · B ÷ (‖A‖ × ‖B‖)<br><span class="num">${d.dot} ÷ (√${d.squareA} × √${d.squareB}) = <b class="t-sca">${f3(d.similarity)}</b></span></p><div class="guide-bars">${scoreBar("Code · cosine similarity",d.similarity,"sca")}${scoreBar("Attributes · Jaccard index",r.j,"saa")}${scoreBar("Combined",fin,"fin")}</div><p class="guide-sum">${f2(state.alpha)} × ${f3(d.similarity)} + ${f2(1-state.alpha)} × ${f3(r.j)} ≈ <b>${f3(fin)}</b></p>${takeaway(`${pairOutcome("final")} ${caseText()}`)}<details class="guide-details"><summary>Inspect code vectors, products and weights</summary><p>For this simulation, each distinct 16-byte code block is a feature; its frequency is a vector entry. MinHash signatures are not used in this calculation.</p>${vectorTable(d,true,true)}<div class="guide-query"><label for="alpha">Code weight α</label><input id="alpha" type="range" min="0" max="1" step="0.05" value="${state.alpha}" data-ctl="alpha"><b>${f2(state.alpha)}</b></div></details>`;
+      $("#guideCalculation").innerHTML=synthesisBody();
+      return;
     }
     $("#guideCalculation").innerHTML=`${pairName()}${body}<p class="caption">Link threshold: ${f2(state.theta)}. Scores and known relationships are simulated.</p>`;
   }
@@ -977,7 +1094,7 @@
     $$("[data-lesson]").forEach(b=>b.setAttribute("aria-pressed",String(state[b.dataset.lessonKey]===b.dataset.lesson)));
   }
   function advance(direction) {
-    if(!state.explore) { goStep(clampN(state.step+direction,0,3)); return; }
+    if(!state.detail) { goStep(clampN(state.step+direction,0,STEPS.length-1)); return; }
     const lesson=LESSONS[STEPS[state.step].id];
     if(lesson) {
       const at=lesson.scenes.findIndex(([id])=>id===state[lesson.key]),next=at+direction;
@@ -994,14 +1111,16 @@
 
   // --------------------------------------------------------------- render --
   function renderStage(animate) {
+    outputPlayback.token++;
+    if(state.step!==4)outputPlayback.playing=false;
     const st = $("#stage");
-    st.innerHTML = state.explore ? GUIDES[STEPS[state.step].id].render() : state.step===0 ? frameworkOverview() : compactShell();
+    st.innerHTML = state.detail || state.step===4 ? GUIDES[STEPS[state.step].id].render() : state.step===0 ? frameworkOverview() : compactShell();
     syncControls();
   }
   function refreshAll() {
     const active=document.activeElement,focusId=active&&active.dataset&&active.dataset.ctl?active.id:null;
     const openDetails=new Set($$("#stage details[open]").map(d=>$("summary",d).textContent));
-    if(state.explore) GUIDES[STEPS[state.step].id].refresh(); else if(state.step!==0) renderCompact();
+    if(state.detail || state.step===4) GUIDES[STEPS[state.step].id].refresh(); else if(state.step!==0) renderCompact();
     syncControls();
     $$("#stage details").forEach(d=>{ if(openDetails.has($("summary",d).textContent)) d.open=true; });
     if(focusId && !document.contains(active)) { const replacement=document.getElementById(focusId); if(replacement) replacement.focus({preventScroll:true}); }
@@ -1010,7 +1129,7 @@
     $("#mTruth").setAttribute("aria-checked", String(truthOn()));
   }
   function goStep(n) {
-    const next = clampN(n, 0, state.explore?STEPS.length-1:3);
+    const next = clampN(n, 0, STEPS.length-1);
     const changed = next !== state.step;
     state.step = next;
     if(next===0) state.inputView="overview";
@@ -1105,6 +1224,7 @@
 
   function onStageInput(ev) {
     const el = ev.target, ctl = el.dataset.ctl;
+    if(el.dataset.motionProgress!==undefined){outputPlayback.playing=false;outputPlayback.time=Math.max(0,Math.min(P.MOTION_DURATION,+el.value));if(outputPlayback.paint)outputPlayback.paint();return;}
     if (!ctl) return;
     if (ctl === "theta") state.theta = Math.round(parseFloat(el.value) * 100) / 100;
     else if (ctl === "alpha") state.alpha = Math.round(parseFloat(el.value) * 100) / 100;
@@ -1118,9 +1238,18 @@
   }
 
   function onStageClick(ev) {
-    const t = ev.target.closest("button, [data-region], [data-keyrow], .node[data-i], [data-card]");
+    const t = ev.target.closest("button, [data-region], [data-keyrow], .node[data-i], [data-card], [data-matrix-a]");
     if (!t) return;
     const ds = t.dataset;
+    if(ds.vectorStep !== undefined) { state.vectorStep=ds.vectorStep; refreshAll(); return; }
+    if(ds.matrixA !== undefined) { if(+ds.matrixA!==+ds.matrixB)setPair(+ds.matrixA,+ds.matrixB); return; }
+    if(ds.playback!==undefined){
+      if(ds.playback==='final'){outputPlayback.time=P.MOTION_DURATION;outputPlayback.playing=false;}
+      else if(ds.playback==='replay'){outputPlayback.time=0;outputPlayback.playing=true;}
+      else {if(outputPlayback.time>=P.MOTION_DURATION)outputPlayback.time=0;outputPlayback.playing=!outputPlayback.playing;}
+      if(outputPlayback.paint)outputPlayback.paint();
+      if(outputPlayback.playing&&outputPlayback.start)outputPlayback.start();return;
+    }
     if(ds.framework !== undefined) { zoomFramework(ds.framework,t); return; }
     if(ds.lesson !== undefined) { state[ds.lessonKey]=ds.lesson; renderHead(); renderStage(false); refreshAll(); $("#stage").scrollTop=0; return; }
     if(ds.analysis !== undefined) { state.outputView=ds.analysis; renderHead(); renderStage(false); refreshAll(); return; }
@@ -1194,11 +1323,10 @@
   }
 
   function bind() {
-    $("#steps").addEventListener("click", (ev) => { const b = ev.target.closest("[data-step]"); if (b) goStep(+b.dataset.step); });
+    $("#steps").addEventListener("click", (ev) => { const b = ev.target.closest("[data-step]"); if (b) { state.detail=false; goStep(+b.dataset.step); } });
     $("#btnPrev").addEventListener("click", () => advance(-1));
     $("#btnNext").addEventListener("click", () => advance(1));
-    $("#btnFramework").addEventListener("click",()=>{state.explore=false;goStep(state.returnStep);});
-    $("#btnExplore").addEventListener("click",()=>{if(!state.explore)state.returnStep=state.step;state.explore=true;goStep(4);});
+    $("#btnFramework").addEventListener("click",()=>{state.detail=false;goStep(state.returnStep);});
     $("#btnDrawer").addEventListener("click", () => setDrawer(!state.drawer));
     $("#btnDrawerClose").addEventListener("click", () => setDrawer(false));
     $("#btnMenu").addEventListener("click", () => toggleMenu());
@@ -1233,7 +1361,7 @@
     stage.addEventListener("change", onStageInput);
     stage.addEventListener("click", onStageClick);
     stage.addEventListener("keydown", (ev) => {
-      if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches(".node, [data-keyrow]")) { ev.preventDefault(); onStageClick({ target: ev.target, shiftKey: ev.shiftKey }); }
+      if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches(".node, [data-keyrow], [data-matrix-a]")) { ev.preventDefault(); onStageClick({ target: ev.target, shiftKey: ev.shiftKey }); }
       if (ev.key === "Enter" && ev.target.id === "comment") { ev.preventDefault(); onStageClick({ target: $("[data-act=comment]"), shiftKey: false }); }
     });
 
@@ -1257,7 +1385,7 @@
       if (keyCtl && /^Arrow/.test(ev.key)) return; // keyboard users adjust the focused control; Esc releases it
       if (ev.key === "ArrowRight" || ev.key === "PageDown") { ev.preventDefault(); advance(1); }
       else if (ev.key === "ArrowLeft" || ev.key === "PageUp") { ev.preventDefault(); advance(-1); }
-      else if (/^[1-5]$/.test(ev.key)) { goStep(+ev.key-1); if (keyCtl) el.blur(); }
+      else if (/^[1-5]$/.test(ev.key)) { state.detail=false; goStep(+ev.key-1); if (keyCtl) el.blur(); }
       else if (ev.key === "/") { ev.preventDefault(); setDrawer(true); setTimeout(() => filter.focus(), 60); }
       else if (ev.key === "d" || ev.key === "D") setDrawer(!state.drawer);
       else if (ev.key === "t" || ev.key === "T") setTruth(!truthOn());
