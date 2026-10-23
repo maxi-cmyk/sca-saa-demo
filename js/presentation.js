@@ -61,7 +61,7 @@
     const width=1600,height=620,duration=MOTION_DURATION,info=groups(matrix,theta),n=matrix.length;
     const start=Array.from({length:n},(_,i)=>({x:110+(i%15)*(width-220)/14,y:90+Math.floor(i/15)*(height-180)/4}));
     const edges=[...info.edges].sort((a,b)=>b.w-a.w||a.a-b.a||a.b-b.b);
-    let history,final,projectSnapshot;
+    let history,final,projectSnapshot,axes;
     if(kind==='scatter') {
       history=[];
       final=C.tsne2d(matrix,{perplexity:n>25?15:3,seed:440,iterations:1000,onIteration:(i,p)=>{if(i>=250)history.push(p);}});
@@ -72,6 +72,7 @@
       let bx=0,by=0;
       for(const frame of history)for(const p of frame){const q=rotate(p);bx=Math.max(bx,Math.abs(q.x));by=Math.max(by,Math.abs(q.y));}
       const scale=Math.min((width-160)/(2*Math.max(bx,1e-9)),(height-120)/(2*Math.max(by,1e-9)));
+      axes={scale,centerX:width/2,centerY:height/2};
       projectSnapshot=pts=>pts.map(p=>{const q=rotate(p);return{x:width/2+q.x*scale,y:height/2-q.y*scale};});
       history=history.map(projectSnapshot);final=history.at(-1);
     }else final=layout(info,width,height);
@@ -86,7 +87,7 @@
       }
       return {points:t<6?start:mix(start,final,ease((t-6)/6)),edges:edges.slice(0,Math.round(edges.length*ease((t-2)/4))),colored:t>=6,phase:t<2?'Samples':t<6?'Links':t<12?'Groups':'Final',iteration:null};
     }
-    const result={duration,info,final,frame,width,height};
+    const result={duration,info,final,frame,width,height,axes};
     if(motionCache.size>=3)motionCache.delete(motionCache.keys().next().value);
     motionCache.set(key,result);return result;
   }

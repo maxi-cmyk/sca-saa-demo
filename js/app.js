@@ -895,23 +895,61 @@
     } else {
       content=`<table class="code-block-excerpt" aria-label="Actual 16-byte code blocks and their occurrence counts"><thead><tr><th>Feature</th><th>Actual block bytes · hex (${chosen.length}/${d.terms.length} shown)</th><th>A</th><th>B</th></tr></thead><tbody>${chosen.map(t=>`<tr><th scope="row" title="${esc(BLOCK_LABELS.get(t.key)||t.key)}">${tex(feature(t))}</th><td><code title="${esc(BLOCK_LABELS.get(t.key)||t.key)}">${codeBlock(t)}</code></td><td>${t.a}</td><td>${t.b}</td></tr>`).join("")}</tbody></table>`;
     }
-    return `<div class="cosine-definition" title="Code cosine similarity, calculated independently of MinHash">${tex(String.raw`S_{\mathrm{code}}=\cos(\mathbf a,\mathbf b)=\frac{\mathbf a\cdot\mathbf b}{\lVert\mathbf a\rVert\,\lVert\mathbf b\rVert}`,true)}</div><div class="seg vector-nav" role="group" aria-label="Build the code vectors">${[["blocks","1. Blocks → counts"],["vectors","2. Counts → vectors"],["cosine","3. Cosine similarity"]].map(([id,label])=>`<button data-vector-step="${id}" aria-pressed="${state.vectorStep===id}">${label}</button>`).join("")}</div><div class="vector-stage" aria-live="polite">${content}</div>`;
+    return `<div class="cosine-definition" title="Code cosine similarity, calculated independently of MinHash">${tex(String.raw`S_{\mathrm{SCA}}(i,j)=\cos(\mathbf a,\mathbf b)=\frac{\mathbf a\cdot\mathbf b}{\lVert\mathbf a\rVert\,\lVert\mathbf b\rVert}`,true)}</div><div class="seg vector-nav" role="group" aria-label="Build the code vectors">${[["blocks","1. Blocks → counts"],["vectors","2. Counts → vectors"],["cosine","3. Cosine similarity"]].map(([id,label])=>`<button data-vector-step="${id}" aria-pressed="${state.vectorStep===id}">${label}</button>`).join("")}</div><div class="vector-stage" aria-live="polite">${content}</div>`;
   }
   function synthesisBody() {
     const d=C.cosineDetails(CODE_VECTORS[state.selA],CODE_VECTORS[state.selB]), a=SAMPLES[state.selA],b=SAMPLES[state.selB],r=C.jaccard(a.attrs,b.attrs),fin=finalM()[state.selA][state.selB],linked=fin>=state.theta,same=a.family===b.family;
-    return `${pairName(true)}<div class="synthesis-calculations"><section class="calculation-panel calculation-sca" aria-labelledby="scaCalculationTitle"><h2 id="scaCalculationTitle">SCA calculation <span class="sca-current-score">${tex(String.raw`\approx ${f3(d.similarity)}`)}</span></h2>${vectorConstruction(d)}</section><section class="calculation-panel calculation-saa" aria-labelledby="saaCalculationTitle"><h2 id="saaCalculationTitle">SAA calculation</h2><div class="calculation-inputs attribute-counts"><span>Only A: <b>${r.onlyA.length}</b></span><span>Shared: <b>${r.inter}</b></span><span>Only B: <b>${r.onlyB.length}</b></span></div>${sharedAttributeExamples(r.shared)}<div class="calculation-equation">${tex(String.raw`S_{\mathrm{attributes}}=\frac{|A\cap B|}{|A\cup B|}=\frac{${r.inter}}{${r.union}}\approx ${f3(r.j)}`,true)}</div></section></div><section class="synthesis-combination" aria-labelledby="combinationTitle"><h2 id="combinationTitle">Combination</h2><div class="combination-main"><div class="synthesis-equation">${tex(String.raw`S_{\mathrm{final}}=${f2(state.alpha)}\times ${f3(d.similarity)}+${f2(1-state.alpha)}\times ${f3(r.j)}\approx ${f3(fin)}`,true)}</div><div class="combination-decision">${decision(linked,same)}${tex(String.raw`${f3(fin)} ${linked?"\\ge":"<"} ${f2(state.theta)}\;\Rightarrow\;\text{${linked?"link":"no link"}}`)}</div></div><div class="combination-footer"><div class="synthesis-settings"><label for="alpha">Code / attribute weight</label><input id="alpha" type="range" min="0" max="1" step="0.05" value="${state.alpha}" data-ctl="alpha"><span>${tex(String.raw`${f2(state.alpha)}\,/\,${f2(1-state.alpha)}`)}</span><button class="btn" data-alpha="0.6">Reset weights</button></div><p class="caption">The paper experimentally uses ${tex(String.raw`0.60`)} for code and ${tex(String.raw`0.40`)} for attributes (Eq. 2).</p><p class="caption">${paperThreshold()}</p></div></section>`;
+    return `${pairName(true)}<div class="synthesis-calculations"><section class="calculation-panel calculation-sca" aria-labelledby="scaCalculationTitle"><h2 id="scaCalculationTitle">SCA calculation <span class="sca-current-score">${tex(String.raw`\approx ${f3(d.similarity)}`)}</span></h2>${vectorConstruction(d)}</section><section class="calculation-panel calculation-saa" aria-labelledby="saaCalculationTitle"><h2 id="saaCalculationTitle">SAA calculation</h2><div class="calculation-inputs attribute-counts"><span>Only A: <b>${r.onlyA.length}</b></span><span>Shared: <b>${r.inter}</b></span><span>Only B: <b>${r.onlyB.length}</b></span></div>${sharedAttributeExamples(r.shared)}<div class="calculation-equation">${tex(String.raw`S_{\mathrm{SAA}}(i,j)=\frac{|A\cap B|}{|A\cup B|}=\frac{${r.inter}}{${r.union}}\approx ${f3(r.j)}`,true)}</div></section></div><section class="synthesis-combination" aria-labelledby="combinationTitle"><h2 id="combinationTitle">Combination</h2><p class="caption combination-weights">${tex(String.raw`\alpha`)} = code similarity weight (${tex(f2(state.alpha))}); ${tex(String.raw`(1-\alpha)`)} = attribute similarity weight (${tex(f2(1-state.alpha))}).</p><div class="synthesis-equation combination-formula">${tex(String.raw`S_{\mathrm{final}}(i,j)=\alpha\cdot S_{\mathrm{SCA}}(i,j)+(1-\alpha)\cdot S_{\mathrm{SAA}}(i,j),\qquad\alpha\in[0,1]`,true)}</div><div class="combination-main"><div class="synthesis-equation">${tex(String.raw`S_{\mathrm{final}}(i,j)=\alpha\times ${f3(d.similarity)}+(1-\alpha)\times ${f3(r.j)}\approx ${f3(fin)}`,true)}</div><div class="combination-decision">${decision(linked,same)}${tex(String.raw`${f3(fin)} ${linked?"\\ge":"<"} ${f2(state.theta)}\;\Rightarrow\;\text{${linked?"link":"no link"}}`)}</div></div><div class="combination-footer"><div class="synthesis-settings"><label for="alpha">Code / attribute weights (${tex(String.raw`\alpha / (1-\alpha)`)})</label><input id="alpha" type="range" min="0" max="1" step="0.05" value="${state.alpha}" data-ctl="alpha"><span>${tex(String.raw`${f2(state.alpha)}\,/\,${f2(1-state.alpha)}`)}</span><button class="btn" data-alpha="0.6">Reset weights</button></div><p class="caption">The paper experimentally uses ${tex(String.raw`\alpha=0.60`)} and ${tex(String.raw`(1-\alpha)=0.40`)} (Eq. 2).</p><p class="caption">${paperThreshold()}</p></div></section>`;
   }
   let outputPlayback={key:null,time:0,playing:false,token:0,paint:null};
   function outputShell() {
     return `<div class="output-content"><div class="output-toolbar"><div class="seg" role="group" aria-label="Analysis view">${[["graph","Clustering"],["heatmap","Similarity matrix"],["scatter","t-SNE"]].map(([id,label])=>`<button data-analysis="${id}" aria-pressed="${state.outputView===id}">${label}</button>`).join("")}</div><div class="output-cutoff"><label for="theta">${state.outputView==="scatter"?"Group cutoff":"Link cutoff"}</label><input id="theta" type="range" min="0.5" max="0.9" step="0.05" value="${state.theta}" data-ctl="theta"><span class="num" data-bind="theta">${f2(state.theta)}</span></div></div><div id="outputPair" class="output-pair"></div><div id="guideAnalysis" class="output-visual"></div></div>`;
   }
   const motionReduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function drawTsneAxes(svg,movie) {
+    const {width,height,axes,info}=movie;
+    const layer=svgEl('g',{'aria-label':'Projection axes and graph group legend','pointer-events':'none'});
+    const text=(value,x,y,attrs={})=>{
+      const label=svgEl('text',{x,y,fill:COL.muted,'font-size':24,...attrs});
+      label.textContent=value;layer.append(label);
+    };
+    layer.append(svgEl('rect',{x:0,y:0,width,height,fill:'none',stroke:COL.ruleStrong,'stroke-width':1.5}));
+    // Tick values use the same fixed, uniformly scaled camera as the points.
+    function ticks(span,center,vertical) {
+      const extent=span/(2*axes.scale),rough=2*extent/(vertical?5:8),power=10**Math.floor(Math.log10(rough));
+      const step=[1,2,5,10].find(n=>n*power>=rough)*power;
+      for(let k=Math.ceil(-extent/step);k<=Math.floor(extent/step);k++) {
+        const value=k*step,pos=center+(vertical?-1:1)*value*axes.scale;
+        layer.append(svgEl('line',vertical?{x1:-7,x2:0,y1:pos,y2:pos,stroke:COL.muted}:{x1:pos,x2:pos,y1:height,y2:height+7,stroke:COL.muted}));
+        const label=Number(value.toPrecision(6)).toString();
+        if(vertical)text(label,-14,pos,{'text-anchor':'end','dominant-baseline':'central'});
+        else text(label,pos,height+32,{'text-anchor':'middle'});
+      }
+    }
+    ticks(width,axes.centerX,false);ticks(height,axes.centerY,true);
+    text('Component 1',width/2,height+72,{'text-anchor':'middle','font-size':28});
+    text('Component 2',-85,height/2,{'text-anchor':'middle','font-size':28,transform:`rotate(-90 -85 ${height/2})`});
+    const ids=[...new Set(info.comp.filter((_,i)=>info.size[i]>1))];
+    const entries=ids.map((id,i)=>({label:`Group ${i+1}`,color:info.colors[info.comp.indexOf(id)]}));
+    if(info.unplaced)entries.push({label:'Unplaced',color:null});
+    const rows=Math.min(entries.length,17),columns=Math.ceil(entries.length/17),legendWidth=columns*185;
+    layer.append(svgEl('rect',{x:width+24,y:0,width:legendWidth,height:52+rows*32,fill:COL.ground,stroke:COL.ruleStrong,'stroke-width':1.5}));
+    text('Graph groups',width+40,32,{fill:COL.text,'font-weight':700});
+    entries.forEach((entry,i)=>{
+      const x=width+44+Math.floor(i/17)*185,y=66+(i%17)*32;
+      layer.append(svgEl('circle',{cx:x,cy:y-7,r:7,fill:entry.color||COL.ground,stroke:entry.color||COL.cream,'stroke-width':1.5,'stroke-dasharray':entry.color?'':'3 3'}));
+      text(entry.label,x+18,y);
+    });
+    svg.setAttribute('viewBox',`-110 -20 ${width+160+legendWidth} ${height+110}`);
+    svg.append(layer);
+  }
   function drawOutputMotion(host,m) {
     const movie=P.motion(m,state.theta,state.outputView),key=JSON.stringify([state.outputView,state.theta,state.alpha]);
     if(outputPlayback.key!==key)outputPlayback={key,time:motionReduced()?movie.duration:0,playing:!motionReduced(),token:outputPlayback.token+1};
     const token=++outputPlayback.token;
     host.innerHTML=`<div class="output-motion-chart" id="motionChart"></div><div class="output-playback"><button class="btn" data-playback="toggle" id="motionToggle">${outputPlayback.playing?"Pause":"Play"}</button><button class="btn" data-playback="replay">Replay</button><label class="sr" for="motionProgress">Animation progress</label><input id="motionProgress" data-motion-progress type="range" min="0" max="${movie.duration}" step="0.05" value="${outputPlayback.time}"><output id="motionTime"></output><button class="btn" data-playback="final">Show final</button><span id="motionPhase" class="motion-phase"></span></div>`;
     const svg=svgEl('svg',{class:'output-svg',viewBox:`0 0 ${movie.width} ${movie.height}`,role:'group','aria-label':state.outputView==='scatter'?'Interactive t-SNE map':'Interactive similarity graph'});
+    if(state.outputView==='scatter')drawTsneAxes(svg,movie);
     const edgeLayer=svgEl('g'),nodeLayer=svgEl('g'),selectedLayer=svgEl('g');svg.append(edgeLayer,nodeLayer,selectedLayer);
     const lines=movie.info.edges.map(e=>{const line=svgEl('line',{stroke:COL.edge,'stroke-width':1.5,'stroke-opacity':.25});edgeLayer.append(line);return {line,e};});
     const nodes=SAMPLES.map((sample,i)=>{
